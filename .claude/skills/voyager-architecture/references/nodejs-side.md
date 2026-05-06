@@ -356,11 +356,12 @@ Key pinned version:
 - `prismarine-block: "=1.16.3"` — exact pin, newer versions break bot interaction logic
 
 Other notable packages:
-- `@babel/core` / `@babel/generator` — used by Python's ActionAgent via `javascript` PyPI package to parse LLM-generated JS AST
 - `minecraft-data` — provides block/item/recipe data for the specific Minecraft version
-- `magic-string` — source map manipulation
+- `magic-string` — efficient string mutation (used in bundlers)
 - `vec3` — 3D vector math
-- `graceful-fs` — cross-platform filesystem operations
+- `graceful-fs` — graceful `fs` fallback for cross-platform compatibility
+
+**Note on `@babel/core` / `@babel/generator`**: these are **not** listed in `package.json`, but must be available in `node_modules/` (they arrive as transitive dependencies). Python's ActionAgent calls `require("@babel/core")` via the PyPI `javascript` package to parse LLM-generated JS AST. If they're missing, `process_ai_message()` will fail.
 
 ---
 

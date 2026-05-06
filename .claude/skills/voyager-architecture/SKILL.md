@@ -36,8 +36,12 @@ See the reference files in `references/` for full component-level detail:
 `Voyager.learn()` runs continuously until `max_iterations` is reached:
 
 ```
-1. env.reset("hard"/"soft")
+Before loop: env.reset("hard")   ← one-time at session start; clears inventory
+             self.last_events = env.step("")  ← initial observation
+
+1. (inside rollout) env.reset("soft")
       └─ HTTP /start → Node.js spawns bot → returns initial observation JSON
+      Note: hard reset only recurs on exception recovery inside the loop
 
 2. CurriculumAgent.propose_next_task(last_events, chest_obs)
       ├─ first task hardcoded: "Mine 1 wood log"

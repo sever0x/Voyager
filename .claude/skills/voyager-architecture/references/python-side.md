@@ -193,6 +193,8 @@ Filters `onChat` events for patterns like "I cannot make X because I need: Y" an
 
 Fields with warm_up > 0 are randomly included with **80% probability** once threshold is reached (deliberate noise for curriculum diversity).
 
+**Non-overridable fields**: regardless of what `warm_up` dict is passed, the constructor always forces `nearby_blocks=0`, `inventory=0`, `completed_tasks=0`, `failed_tasks=0` (hardcoded in `curriculum.py:86-89`). Passing custom values for these in the constructor has no effect.
+
 **`run_qa_step1_ask_questions`**:
 - Always asks 3 biome questions: "What are the blocks/items/mobs in [biome]?"
 - Then asks GPT-3.5 to generate additional questions in format "Question N: ...\nConcept N: ..."
@@ -271,6 +273,8 @@ Two directories with parallel files:
 | `useChest.js` | Full implementation | Simplified |
 | `shoot.js` | Full implementation | (not in context) |
 | `craftHelper.js` | Full implementation | (not in context) |
+| `givePlacedItemBack.js` | Full implementation — reverts block placements when `reset_placed_if_failed=True` | (not in context) |
+| `waitForMobRemoved.js` | Full implementation | (not in context) |
 | `mineflayer.js` | — | Mineflayer API overview for LLM |
 
 **Loading**:
