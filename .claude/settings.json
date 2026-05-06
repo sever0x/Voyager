@@ -1,0 +1,28 @@
+{
+  "enabledPlugins": {
+    "skill-creator@claude-plugins-official": true
+  },
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Edit(.env)",
+      "Write(.env)",
+      "Bash(* .env *)",
+      "Bash(* .env)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/git-add-on-write.js",
+            "statusMessage": "Staging new file with git..."
+          }
+        ]
+      }
+    ]
+  }
+}
