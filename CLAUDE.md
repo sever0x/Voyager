@@ -8,14 +8,32 @@ Voyager is an LLM-powered embodied lifelong learning agent for Minecraft. It use
 
 ## Setup
 
-### Python
+### Prerequisites
+
+- Python 3.9
+- Node.js ≥ 16.13.0
+- OpenAI API key with GPT-4 access
+- Minecraft 1.19 with Fabric loader 0.14.18 (see `installation/` for details)
+- **Windows only**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload — required to compile `hnswlib` and `greenlet`. Without this, `pip install -e .` will fail.
+
+### Python (use a virtual environment)
+
 ```bash
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
 pip install -e .
+pip install python-dotenv
 ```
 
 ### Node.js (Mineflayer bot server)
 ```bash
 cd voyager/env/mineflayer
+npm install -g npx
 npm install
 cd mineflayer-collectblock
 npx tsc        # compile TypeScript plugin
@@ -23,18 +41,41 @@ cd ..
 npm install
 ```
 
-Minecraft also requires a running game instance (Azure login or direct port) and Fabric mods — see `installation/` for details.
+### Minecraft
+
+Two options to get the `mc_port`:
+
+**Option A — any launcher (PrismLauncher, TLauncher, etc.)**
+1. Launch Minecraft 1.19 with Fabric loader 0.14.18 and required mods installed (see `installation/fabric_mods_install.md`)
+2. Create a world: Game Mode **Creative**, Difficulty **Peaceful**
+3. `Esc` → **Open to LAN** → Allow Cheats: ON → **Start LAN World**
+4. Note the port number shown in chat — that is your `MC_PORT`
+
+**Option B — Azure login (auto-resume on timeout)**
+See `installation/minecraft_instance_install.md`.
 
 ## Running
+
+Copy `.env` (already in `.gitignore`) and fill in your values:
+
+```
+MC_PORT=XXXXX
+OPENAI_API_KEY=sk-...
+```
+
+Then run:
+
+```bash
+python run.py
+```
+
+`run.py` loads these values automatically via `python-dotenv`.
+
+For inference from a pre-built skill library:
 
 ```python
 from voyager import Voyager
 
-# Lifelong learning
-voyager = Voyager(mc_port=25565, openai_api_key="...")
-voyager.learn()
-
-# Inference from a pre-built skill library
 voyager = Voyager(skill_library_dir="./skill_library/trial1", ckpt_dir="...", resume=True)
 voyager.inference(sub_goals=voyager.decompose_task("Craft a diamond pickaxe"))
 ```
