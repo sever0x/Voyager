@@ -71,6 +71,83 @@ You need to install fabric mods to support all the features in Voyager. Remember
 
 Follow the instructions in [Fabric Mods Install](installation/fabric_mods_install.md) to install the mods.
 
+# Local Development Setup
+
+This section covers the full setup process for developers running the project locally, including platform-specific requirements and verified steps.
+
+## Prerequisites
+
+- Python 3.9
+- Node.js ≥ 16.13.0
+- OpenAI API key with GPT-4 access
+- Minecraft 1.19 with Fabric loader 0.14.18 and required mods (see `installation/fabric_mods_install.md`)
+- **Windows only**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload — required to compile `hnswlib` and `greenlet`. Without this, `pip install -e .` will fail.
+
+## Step 1 — Python environment
+
+Use a virtual environment to avoid dependency conflicts:
+
+```bash
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+pip install -e .
+pip install python-dotenv
+```
+
+## Step 2 — Node.js dependencies
+
+`mineflayer-collectblock` is a local TypeScript plugin referenced as a `file:` dependency. It must be compiled **before** the parent `npm install` picks it up:
+
+```bash
+cd voyager/env/mineflayer/mineflayer-collectblock
+npm install
+npx tsc
+cd ..
+npm install
+```
+
+To verify the Mineflayer server starts correctly:
+
+```bash
+node index.js 3000
+# Expected: "Server started on port 3000"
+# Press Ctrl+C to stop
+```
+
+## Step 3 — Minecraft
+
+1. Launch Minecraft 1.19 with Fabric loader 0.14.18 and required mods installed
+2. Create a world: Game Mode **Creative**, Difficulty **Peaceful**
+3. `Esc` → **Open to LAN** → Allow Cheats: ON → **Start LAN World**
+4. Note the port number shown in chat — that is your `MC_PORT`
+
+## Step 4 — Environment variables
+
+Create a `.env` file in the project root (already in `.gitignore`):
+
+```
+MC_PORT=XXXXX
+OPENAI_API_KEY=sk-...
+```
+
+## Step 5 — Run
+
+```bash
+python run.py
+```
+
+`run.py` loads `.env` automatically via `python-dotenv`. No need to set environment variables manually.
+
+## Expected runtime behaviour
+
+- **LangChain deprecation warnings** about `ChatOpenAI` and `OpenAIEmbeddings` are harmless — the pinned dependency versions still work.
+- **"bot left game" / "bot connected to the game"** appearing repeatedly between tasks is normal. The environment resets the bot between each task (hard reset: clears inventory, respawns) to ensure a clean state for the next iteration.
+
 # Getting Started
 Voyager uses OpenAI's GPT-4 as the language model. You need to have an OpenAI API key to use Voyager. You can get one from [here](https://platform.openai.com/account/api-keys).
 
