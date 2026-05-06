@@ -1,0 +1,14 @@
+{
+  "enabledPlugins": {
+    "skill-creator@claude-plugins-official": true
+  },
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Edit(.env)",
+      "Write(.env)",
+      "Bash(* .env *)",
+      "Bash(* .env)"
+    ]
+  }
+}
