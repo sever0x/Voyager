@@ -31,14 +31,23 @@ pip install python-dotenv
 ```
 
 ### Node.js (Mineflayer bot server)
+
+`mineflayer-collectblock` is a local `file:` dependency, so it must be compiled before the parent `npm install` picks it up:
+
 ```bash
-cd voyager/env/mineflayer
-npm install -g npx
+cd voyager/env/mineflayer/mineflayer-collectblock
 npm install
-cd mineflayer-collectblock
-npx tsc        # compile TypeScript plugin
+npx tsc
 cd ..
 npm install
+```
+
+To verify the server starts correctly before running the full system:
+
+```bash
+node index.js 3000
+# Expected output: "Server started on port 3000"
+# Then Ctrl+C
 ```
 
 ### Minecraft
@@ -81,6 +90,11 @@ voyager.inference(sub_goals=voyager.decompose_task("Craft a diamond pickaxe"))
 ```
 
 There is no formal test suite. Manual testing happens by running the agent against a live Minecraft instance.
+
+### Expected runtime behaviour
+
+- **"bot left game" / "bot connected to the game"** appearing repeatedly is normal. Between tasks, `env.reset()` stops and restarts the Mineflayer bot to hard-reset the bot's state (clear inventory, respawn). This is by design.
+- LangChain deprecation warnings about `ChatOpenAI` and `OpenAIEmbeddings` are harmless — the pinned dependency versions still work despite them.
 
 ## Architecture
 
