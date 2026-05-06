@@ -10,5 +10,19 @@
       "Bash(* .env *)",
       "Bash(* .env)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/git-add-on-write.js",
+            "statusMessage": "Staging new file with git..."
+          }
+        ]
+      }
+    ]
   }
 }
