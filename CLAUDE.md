@@ -10,9 +10,9 @@ Voyager is an LLM-powered embodied lifelong learning agent for Minecraft. It use
 
 ### Prerequisites
 
-- Python 3.9
+- Python 3.13
 - Node.js ≥ 16.13.0
-- OpenAI API key with GPT-4 access
+- OpenAI API key
 - Minecraft 1.19 with Fabric loader 0.14.18 (see `installation/` for details)
 - **Windows only**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload — required to compile `hnswlib` and `greenlet`. Without this, `pip install -e .` will fail.
 
@@ -94,7 +94,7 @@ There is no formal test suite. Manual testing happens by running the agent again
 ### Expected runtime behaviour
 
 - **"bot left game" / "bot connected to the game"** appearing repeatedly is normal. Between tasks, `env.reset()` stops and restarts the Mineflayer bot to hard-reset the bot's state (clear inventory, respawn). This is by design.
-- LangChain deprecation warnings about `ChatOpenAI` and `OpenAIEmbeddings` are harmless — the pinned dependency versions still work despite them.
+- LangChain deprecation warnings about `ChatOpenAI` and `OpenAIEmbeddings` are no longer expected — the project was migrated to `langchain==1.2.17` with `langchain-openai` and `langchain-chroma` packages.
 
 ## Architecture
 
@@ -109,9 +109,9 @@ Python communicates with Node.js through HTTP (via `voyager/env/bridge.py`), sen
 
 | Agent | Role |
 |---|---|
-| `ActionAgent` | Generates and iteratively refines executable JavaScript via GPT-4; retrieves relevant skills from the skill library before each step |
-| `CurriculumAgent` | Proposes the next task using GPT-4, uses GPT-3.5-turbo for Q&A context; caches results in Chroma vectordb |
-| `CriticAgent` | Verifies whether a task was completed by analyzing final environment state via GPT-4 |
+| `ActionAgent` | Generates and iteratively refines executable JavaScript via gpt-5.4-mini; retrieves relevant skills from the skill library before each step |
+| `CurriculumAgent` | Proposes the next task using gpt-5.4-mini, uses gpt-5.4-nano for Q&A context; caches results in Chroma vectordb |
+| `CriticAgent` | Verifies whether a task was completed by analyzing final environment state via gpt-5.4-mini |
 | `SkillManager` | Stores learned JavaScript functions as named skills with LLM-generated descriptions; retrieves top-k relevant skills via Chroma + OpenAI embeddings |
 
 ### Environment (`voyager/env/`)
@@ -150,7 +150,8 @@ Pass `resume=True` to restart from an existing checkpoint directory.
 ## Key Design Decisions
 
 - **Dual vectordb**: Chroma is used separately for skills (semantic code retrieval) and curriculum Q&A (caching task context). Both rely on OpenAI embeddings.
-- **Cost split**: GPT-4 for action generation, critic, and curriculum proposal; GPT-3.5-turbo for simpler Q&A in `CurriculumAgent`.
-- **`chromadb==0.3.29` is pinned** in `requirements.txt` — newer versions broke the API. Do not upgrade without testing.
+- **Cost split**: `gpt-5.4-mini` for action generation, critic, and curriculum proposal; `gpt-5.4-nano` for simpler Q&A in `CurriculumAgent` and skill descriptions. All models are configurable via `.env` — see `.env.example`.
+- **`chromadb==1.5.9` is pinned** in `requirements.txt`. Auto-persists on every write — no explicit `.persist()` calls needed. Vectordb dirs (`ckpt/*/vectordb/`) must be deleted when switching embedding models.
+- **`langchain==1.2.17` requires Python 3.13+** (3.x series required Python 3.9+; 1.x dropped 3.9 support). Do not downgrade Python below 3.10.
 - **`prismarine-block` version is pinned** in `package.json` — a newer version was incompatible with the bot logic.
 - **Max retries**: `ActionAgent` retries code generation up to `action_agent_task_max_retries` times per task, incorporating error output and critic feedback into subsequent prompts.
