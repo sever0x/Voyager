@@ -21,6 +21,7 @@ Each phase has a companion document in `docs/roadmap/` with full technical decis
 | Phase | Technical Design Document |
 |---|---|
 | Phase 1 | [docs/roadmap/phase-1-architectural-foundations.md](docs/roadmap/phase-1-architectural-foundations.md) |
+| Phase 2 | [docs/roadmap/phase-2-survival-core.md](docs/roadmap/phase-2-survival-core.md) |
 
 ---
 
