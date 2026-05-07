@@ -19,6 +19,7 @@ class VoyagerEnv(gym.Env):
     def __init__(
         self,
         mc_port=None,
+        mc_version=None,
         azure_login=None,
         server_host="http://127.0.0.1",
         server_port=3000,
@@ -32,6 +33,7 @@ class VoyagerEnv(gym.Env):
                 "Both mc_port and mc_login are specified, mc_port will be ignored"
             )
         self.mc_port = mc_port
+        self.mc_version = mc_version
         self.azure_login = azure_login
         self.server = f"{server_host}:{server_port}"
         self.server_port = server_port
@@ -147,6 +149,7 @@ class VoyagerEnv(gym.Env):
             "spread": options.get("spread", False),
             "waitTicks": options.get("wait_ticks", 5),
             "position": options.get("position", None),
+            "version": self.mc_version,
         }
 
         self.unpause()

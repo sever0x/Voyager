@@ -4,7 +4,8 @@ import re
 import voyager.utils as U
 from voyager.prompts import load_prompt
 from voyager.utils.json_utils import fix_and_parse_json
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.language_models import BaseChatModel
+from langchain_core.embeddings import Embeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_chroma import Chroma
 
@@ -12,28 +13,17 @@ from langchain_chroma import Chroma
 class CurriculumAgent:
     def __init__(
         self,
-        model_name="gpt-5.4-mini",
-        temperature=0,
-        qa_model_name="gpt-5.4-nano",
-        qa_temperature=0,
-        request_timout=120,
+        llm: BaseChatModel,
+        qa_llm: BaseChatModel,
+        embeddings: Embeddings,
         ckpt_dir="ckpt",
         resume=False,
         mode="auto",
         warm_up=None,
         core_inventory_items: str | None = None,
-        embedding_model_name: str = "text-embedding-3-small",
     ):
-        self.llm = ChatOpenAI(
-            model=model_name,
-            temperature=temperature,
-            request_timeout=request_timout,
-        )
-        self.qa_llm = ChatOpenAI(
-            model=qa_model_name,
-            temperature=qa_temperature,
-            request_timeout=request_timout,
-        )
+        self.llm = llm
+        self.qa_llm = qa_llm
         assert mode in [
             "auto",
             "manual",
@@ -55,7 +45,7 @@ class CurriculumAgent:
         # vectordb for qa cache
         self.qa_cache_questions_vectordb = Chroma(
             collection_name="qa_cache_questions_vectordb",
-            embedding_function=OpenAIEmbeddings(model=embedding_model_name),
+            embedding_function=embeddings,
             persist_directory=f"{ckpt_dir}/curriculum/vectordb",
         )
         assert self.qa_cache_questions_vectordb._collection.count() == len(

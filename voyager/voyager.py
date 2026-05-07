@@ -6,6 +6,7 @@ from typing import Dict
 
 import voyager.utils as U
 from .env import VoyagerEnv
+from .utils.llm_factory import create_llm, create_embeddings
 
 from .agents import ActionAgent
 from .agents import CriticAgent
@@ -18,9 +19,12 @@ class Voyager:
     def __init__(
         self,
         mc_port: int = None,
+        mc_version: str = None,
         azure_login: Dict[str, str] = None,
         server_port: int = 3000,
         openai_api_key: str = None,
+        llm_provider: str = "openai",
+        embedding_provider: str = "openai",
         env_wait_ticks: int = 20,
         env_request_timeout: int = 600,
         max_iterations: int = 160,
@@ -105,6 +109,7 @@ class Voyager:
         # init env
         self.env = VoyagerEnv(
             mc_port=mc_port,
+            mc_version=mc_version,
             azure_login=azure_login,
             server_port=server_port,
             request_timeout=env_request_timeout,
@@ -113,14 +118,36 @@ class Voyager:
         self.reset_placed_if_failed = reset_placed_if_failed
         self.max_iterations = max_iterations
 
-        # set openai api key
-        os.environ["OPENAI_API_KEY"] = openai_api_key
+        if openai_api_key:
+            os.environ["OPENAI_API_KEY"] = openai_api_key
+
+        # build LLM and embeddings objects once; pass into agents
+        _llm_kwargs = {"request_timeout": openai_api_request_timeout}
+        action_llm = create_llm(
+            llm_provider, action_agent_model_name,
+            temperature=action_agent_temperature, **_llm_kwargs,
+        )
+        curriculum_llm = create_llm(
+            llm_provider, curriculum_agent_model_name,
+            temperature=curriculum_agent_temperature, **_llm_kwargs,
+        )
+        curriculum_qa_llm = create_llm(
+            llm_provider, curriculum_agent_qa_model_name,
+            temperature=curriculum_agent_qa_temperature, **_llm_kwargs,
+        )
+        critic_llm = create_llm(
+            llm_provider, critic_agent_model_name,
+            temperature=critic_agent_temperature, **_llm_kwargs,
+        )
+        skill_llm = create_llm(
+            llm_provider, skill_manager_model_name,
+            temperature=skill_manager_temperature, **_llm_kwargs,
+        )
+        embeddings = create_embeddings(embedding_provider, embedding_model_name)
 
         # init agents
         self.action_agent = ActionAgent(
-            model_name=action_agent_model_name,
-            temperature=action_agent_temperature,
-            request_timout=openai_api_request_timeout,
+            llm=action_llm,
             ckpt_dir=ckpt_dir,
             resume=resume,
             chat_log=action_agent_show_chat_log,
@@ -129,32 +156,25 @@ class Voyager:
         )
         self.action_agent_task_max_retries = action_agent_task_max_retries
         self.curriculum_agent = CurriculumAgent(
-            model_name=curriculum_agent_model_name,
-            temperature=curriculum_agent_temperature,
-            qa_model_name=curriculum_agent_qa_model_name,
-            qa_temperature=curriculum_agent_qa_temperature,
-            request_timout=openai_api_request_timeout,
+            llm=curriculum_llm,
+            qa_llm=curriculum_qa_llm,
+            embeddings=embeddings,
             ckpt_dir=ckpt_dir,
             resume=resume,
             mode=curriculum_agent_mode,
             warm_up=curriculum_agent_warm_up,
             core_inventory_items=curriculum_agent_core_inventory_items,
-            embedding_model_name=embedding_model_name,
         )
         self.critic_agent = CriticAgent(
-            model_name=critic_agent_model_name,
-            temperature=critic_agent_temperature,
-            request_timout=openai_api_request_timeout,
+            llm=critic_llm,
             mode=critic_agent_mode,
         )
         self.skill_manager = SkillManager(
-            model_name=skill_manager_model_name,
-            temperature=skill_manager_temperature,
+            llm=skill_llm,
+            embeddings=embeddings,
             retrieval_top_k=skill_manager_retrieval_top_k,
-            request_timout=openai_api_request_timeout,
             ckpt_dir=skill_library_dir if skill_library_dir else ckpt_dir,
             resume=True if resume or skill_library_dir else False,
-            embedding_model_name=embedding_model_name,
         )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume

@@ -32,6 +32,7 @@ app.post("/start", (req, res) => {
         username: "bot",
         disableChatSigning: true,
         checkTimeoutInterval: 60 * 60 * 1000,
+        ...(req.body.version ? { version: req.body.version } : {}),
     });
     bot.once("error", onConnectionFailed);
 

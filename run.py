@@ -5,11 +5,13 @@ from voyager import Voyager
 load_dotenv()
 
 mc_port = int(os.environ["MC_PORT"])
-openai_api_key = os.environ["OPENAI_API_KEY"]
 
 voyager = Voyager(
     mc_port=mc_port,
-    openai_api_key=openai_api_key,
+    mc_version=os.environ.get("MC_VERSION"),
+    openai_api_key=os.environ.get("OPENAI_API_KEY"),
+    llm_provider=os.environ.get("LLM_PROVIDER", "openai"),
+    embedding_provider=os.environ.get("EMBEDDING_PROVIDER", "openai"),
     action_agent_model_name=os.environ.get("ACTION_MODEL", "gpt-5.4-mini"),
     curriculum_agent_model_name=os.environ.get("CURRICULUM_MODEL", "gpt-5.4-mini"),
     curriculum_agent_qa_model_name=os.environ.get("CURRICULUM_QA_MODEL", "gpt-5.4-nano"),
