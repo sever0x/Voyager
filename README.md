@@ -6,12 +6,12 @@
 [[PDF]](https://voyager.minedojo.org/assets/documents/voyager.pdf)
 [[Tweet]](https://twitter.com/DrJimFan/status/1662115266933972993?s=20)
 
-[![Python Version](https://img.shields.io/badge/Python-3.13-blue.svg)](https://github.com/MineDojo/Voyager)
-[![GitHub license](https://img.shields.io/github/license/MineDojo/Voyager)](https://github.com/MineDojo/Voyager/blob/main/LICENSE)
+[![Python Version](https://img.shields.io/badge/Python-3.13-blue.svg)](https://github.com/sever0x/Voyager)
+[![GitHub license](https://img.shields.io/github/license/sever0x/Voyager)](https://github.com/sever0x/Voyager/blob/main/LICENSE)
 ______________________________________________________________________
 
 
-https://github.com/MineDojo/Voyager/assets/25460983/ce29f45b-43a5-4399-8fd8-5dd105fd64f2
+https://github.com/sever0x/Voyager/assets/25460983/ce29f45b-43a5-4399-8fd8-5dd105fd64f2
 
 ![](images/pull.png)
 
@@ -42,7 +42,7 @@ Voyager requires Python ≥ 3.13 and Node.js ≥ 16.13.0. We have tested on Ubun
 
 ## Python Install
 ```bash
-git clone https://github.com/MineDojo/Voyager
+git clone https://github.com/sever0x/Voyager
 cd Voyager
 python -m venv venv
 # Windows: venv\Scripts\activate  /  macOS-Linux: source venv/bin/activate

@@ -34,7 +34,7 @@ setup(
     name=PKG_NAME,
     version=VERSION,
     author=f"MineDojo Team",
-    url="https://github.com/MineDojo/Voyager",
+    url="https://github.com/sever0x/Voyager",
     description="research project",
     long_description=_read_file("README.md"),
     long_description_content_type="text/markdown",
