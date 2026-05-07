@@ -1,18 +1,15 @@
-import pkg_resources
-import os
+import pathlib
 import voyager.utils as U
+
+_PRIMITIVES_CONTEXT_PATH = pathlib.Path(__file__).parent
 
 
 def load_control_primitives_context(primitive_names=None):
-    package_path = pkg_resources.resource_filename("voyager", "")
     if primitive_names is None:
         primitive_names = [
-            primitive[:-3]
-            for primitive in os.listdir(f"{package_path}/control_primitives_context")
-            if primitive.endswith(".js")
+            p.stem for p in _PRIMITIVES_CONTEXT_PATH.iterdir() if p.suffix == ".js"
         ]
-    primitives = [
-        U.load_text(f"{package_path}/control_primitives_context/{primitive_name}.js")
-        for primitive_name in primitive_names
+    return [
+        U.load_text(str(_PRIMITIVES_CONTEXT_PATH / f"{name}.js"))
+        for name in primitive_names
     ]
-    return primitives
