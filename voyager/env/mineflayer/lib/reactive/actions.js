@@ -1,46 +1,35 @@
 const { goals: { GoalBlock } } = require("mineflayer-pathfinder");
+const { isInFireBlock } = require("./rules");
 
 async function escapeFromHazard(bot) {
     if (bot.pathfinder) bot.pathfinder.setGoal(null);
 
     const pos = bot.entity.position;
-    const offsets = [
-        [1, 0], [-1, 0], [0, 1], [0, -1],
-        [2, 0], [-2, 0], [0, 2], [0, -2],
-        [1, 1], [-1, 1], [1, -1], [-1, -1],
-    ];
 
-    for (const [dx, dz] of offsets) {
-        const candidate = pos.offset(dx, 0, dz);
-        const floor = bot.blockAt(candidate.offset(0, -1, 0));
-        const foot = bot.blockAt(candidate);
-        const head = bot.blockAt(candidate.offset(0, 1, 0));
+    const safeTarget = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        .map(([dx, dz]) => pos.offset(dx, 0, dz))
+        .find((candidate) => {
+            const block = bot.blockAt(candidate);
+            return block && !["lava", "fire", "soul_fire", "magma_block"].includes(block.name);
+        });
 
-        const hazardNames = ["lava", "fire", "magma_block"];
-        if (
-            floor && !hazardNames.includes(floor.name) &&
-            foot && foot.name === "air" &&
-            head && head.name === "air"
-        ) {
-            try {
-                await bot.pathfinder.goto(
-                    new GoalBlock(
-                        Math.floor(candidate.x),
-                        Math.floor(candidate.y),
-                        Math.floor(candidate.z)
-                    )
-                );
-            } catch (_) {
-                bot.setControlState("jump", true);
-                await bot.waitForTicks(5);
-                bot.setControlState("jump", false);
-            }
-            return;
-        }
+    if (safeTarget) {
+        await bot.lookAt(safeTarget.offset(0, 0.5, 0));
     }
 
-    bot.setControlState("jump", true);
-    await bot.waitForTicks(5);
+    bot.setControlState("sprint", true);
+    bot.setControlState("forward", true);
+
+    for (let i = 0; i < 12; i++) {
+        bot.setControlState("jump", true);
+        await bot.waitForTicks(2);
+        bot.setControlState("jump", false);
+        await bot.waitForTicks(3);
+        if (!bot.entity.isInLava && !isInFireBlock(bot)) break;
+    }
+
+    bot.setControlState("forward", false);
+    bot.setControlState("sprint", false);
     bot.setControlState("jump", false);
 }
 

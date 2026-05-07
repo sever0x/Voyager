@@ -18,7 +18,14 @@ function initReactiveEngine(bot) {
     let criticalInProgress = false;
 
     bot.on("physicTick", () => {
-        if (criticalInProgress) return;
+        if (criticalInProgress) {
+            if (!checkCritical(bot)) {
+                criticalInProgress = false;
+                abortFlag.current = null;
+            }
+            return;
+        }
+
         const result = checkCritical(bot);
         if (!result) return;
 
@@ -27,17 +34,9 @@ function initReactiveEngine(bot) {
         if (bot.pathfinder) bot.pathfinder.setGoal(null);
         emitEvent(result);
 
-        const action =
-            result.action === "escape_hazard"
-                ? escapeFromHazard(bot)
-                : Promise.resolve();
-
-        action
-            .catch(() => {})
-            .finally(() => {
-                abortFlag.current = null;
-                criticalInProgress = false;
-            });
+        if (result.action === "escape_hazard") {
+            escapeFromHazard(bot).catch(() => {});
+        }
     });
 
     const p1 = setInterval(() => {
