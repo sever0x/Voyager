@@ -54,6 +54,7 @@ class Voyager:
         ckpt_dir: str = "ckpt",
         skill_library_dir: str = None,
         resume: bool = False,
+        reset_mode: str = "hard",
     ):
         """
         The main class for Voyager.
@@ -105,6 +106,9 @@ class Voyager:
         :param ckpt_dir: checkpoint dir
         :param skill_library_dir: skill library dir
         :param resume: whether to resume from checkpoint
+        :param reset_mode: "hard" clears inventory and kills bot between tasks (Creative default),
+            "soft" reconnects without clearing inventory (Survival default),
+            "none" continues without any reset (future use)
         """
         # init env
         self.env = VoyagerEnv(
@@ -178,6 +182,7 @@ class Voyager:
         )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
+        self.reset_mode = reset_mode
 
         # init variables for rollout
         self.action_agent_rollout_num_iter = -1
@@ -319,7 +324,6 @@ class Voyager:
 
     def learn(self, reset_env=True):
         if self.resume:
-            # keep the inventory
             self.env.reset(
                 options={
                     "mode": "soft",
@@ -327,10 +331,9 @@ class Voyager:
                 }
             )
         else:
-            # clear the inventory
             self.env.reset(
                 options={
-                    "mode": "hard",
+                    "mode": self.reset_mode,
                     "wait_ticks": self.env_wait_ticks,
                 }
             )
@@ -362,15 +365,23 @@ class Voyager:
                     "success": False,
                 }
                 # reset bot status here
-                self.last_events = self.env.reset(
-                    options={
-                        "mode": "hard",
-                        "wait_ticks": self.env_wait_ticks,
-                        "inventory": self.last_events[-1][1]["inventory"],
-                        "equipment": self.last_events[-1][1]["status"]["equipment"],
-                        "position": self.last_events[-1][1]["status"]["position"],
-                    }
-                )
+                if self.reset_mode == "hard":
+                    self.last_events = self.env.reset(
+                        options={
+                            "mode": "hard",
+                            "wait_ticks": self.env_wait_ticks,
+                            "inventory": self.last_events[-1][1]["inventory"],
+                            "equipment": self.last_events[-1][1]["status"]["equipment"],
+                            "position": self.last_events[-1][1]["status"]["position"],
+                        }
+                    )
+                else:
+                    self.last_events = self.env.reset(
+                        options={
+                            "mode": "soft",
+                            "wait_ticks": self.env_wait_ticks,
+                        }
+                    )
                 # use red color background to print the error
                 print("Your last round rollout terminated due to error:")
                 print(f"\033[41m{e}\033[0m")

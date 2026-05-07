@@ -307,7 +307,8 @@ When `GAME_MODE=survival`:
 | ✅ Done | `voyager/env/mineflayer/lib/reactive/actions.js` | New — emergency action implementations |
 | ✅ Done | `voyager/env/mineflayer/lib/observation/reactive_events.js` | New — recentReactiveEvents observation module (not in original plan, added during implementation) |
 | ✅ Done | `voyager/env/mineflayer/index.js` | Modified — initialize reactive engine, add recentReactiveEvents to observations, clear events at /step start |
-| ✅ Partial | `voyager/env/bridge.py` | pause/unpause removed from step() hot path; reset_mode param not yet added |
+| ✅ Done | `voyager/env/bridge.py` | pause/unpause removed from step() hot path; reset_mode flows through existing options dict |
+| ✅ Done | `voyager/voyager.py` | reset_mode param added to __init__; learn() uses it for initial and error-recovery resets |
 | ⬜ Not started | `voyager/env/mineflayer/lib/observation/players.js` | New — nearbyPlayers observation module |
 | ⬜ Not started | `voyager/voyager.py` | Modified — remove forced hard reset from learn(), add survival override call |
 | ⬜ Not started | `voyager/agents/curriculum_agent.py` | Modified — parse nearbyPlayers, add survival override integration |

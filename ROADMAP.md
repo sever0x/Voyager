@@ -69,7 +69,7 @@ The `pause`/`unpause` calls must be removed from the hot path. LLM calls must be
 
 ---
 
-### 1.2 — Persistent Session State (Remove Hard Reset) 🔄
+### 1.2 — Persistent Session State (Remove Hard Reset) ✅
 
 Currently `env.reset("hard")` clears the bot's inventory and kills it between every task. In survival, inventory is accumulated progress — destroying it between tasks is fatal to the concept.
 
@@ -117,7 +117,7 @@ The entire system assumes Creative + Peaceful. Prompts, observation parsing, and
 
 **Phase 1 Milestone:** The bot runs in Survival mode without crashing or resetting its inventory when damaged. It reacts to taking damage without waiting for an LLM call. The player can observe the bot in the world.
 
-> **Current status:** Reactive layer (1.1) implemented and tested — bot detects lava, fire, void and executes escape. Pause removed from step loop. Remaining: `reset_mode` param (1.2), player observation (1.3), survival prompts and override (1.4).
+> **Current status:** 1.1 ✅ reactive layer implemented and tested. 1.2 ✅ `reset_mode` param added, inventory preserved between tasks in survival mode. Remaining: player observation (1.3), survival prompts and override (1.4).
 
 ---
 
