@@ -7,7 +7,7 @@ from langchain.schema import HumanMessage, SystemMessage
 class CriticAgent:
     def __init__(
         self,
-        model_name="gpt-3.5-turbo",
+        model_name="gpt-5.4-mini",
         temperature=0,
         request_timout=120,
         mode="auto",
