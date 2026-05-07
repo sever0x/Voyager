@@ -131,3 +131,4 @@ plot_iter.py
 # Custom local files
 *.local.*
 *.lock.*
+*.iml
