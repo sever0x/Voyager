@@ -6,7 +6,7 @@
 [[PDF]](https://voyager.minedojo.org/assets/documents/voyager.pdf)
 [[Tweet]](https://twitter.com/DrJimFan/status/1662115266933972993?s=20)
 
-[![Python Version](https://img.shields.io/badge/Python-3.9-blue.svg)](https://github.com/MineDojo/Voyager)
+[![Python Version](https://img.shields.io/badge/Python-3.13-blue.svg)](https://github.com/MineDojo/Voyager)
 [![GitHub license](https://img.shields.io/github/license/MineDojo/Voyager)](https://github.com/MineDojo/Voyager/blob/main/LICENSE)
 ______________________________________________________________________
 
@@ -38,22 +38,24 @@ solve novel tasks from scratch, while other techniques struggle to generalize.
 In this repo, we provide Voyager code. This codebase is under [MIT License](LICENSE).
 
 # Installation
-Voyager requires Python ≥ 3.9 and Node.js ≥ 16.13.0. We have tested on Ubuntu 20.04, Windows 11, and macOS. You need to follow the instructions below to install Voyager.
+Voyager requires Python ≥ 3.13 and Node.js ≥ 16.13.0. We have tested on Ubuntu 20.04, Windows 11, and macOS. You need to follow the instructions below to install Voyager.
 
 ## Python Install
-```
+```bash
 git clone https://github.com/MineDojo/Voyager
 cd Voyager
+python -m venv venv
+# Windows: venv\Scripts\activate  /  macOS-Linux: source venv/bin/activate
 pip install -e .
+pip install python-dotenv
 ```
 
 ## Node.js Install
-In addition to the Python dependencies, you need to install the following Node.js packages:
-```
-cd voyager/env/mineflayer
-npm install -g npx
+In addition to the Python dependencies, you need to install the following Node.js packages.
+`mineflayer-collectblock` is a local TypeScript plugin and must be compiled **before** the parent `npm install`:
+```bash
+cd voyager/env/mineflayer/mineflayer-collectblock
 npm install
-cd mineflayer-collectblock
 npx tsc
 cd ..
 npm install
@@ -77,9 +79,9 @@ This section covers the full setup process for developers running the project lo
 
 ## Prerequisites
 
-- Python 3.9
+- Python 3.13
 - Node.js ≥ 16.13.0
-- OpenAI API key with GPT-4 access
+- OpenAI API key
 - Minecraft 1.19 with Fabric loader 0.14.18 and required mods (see `installation/fabric_mods_install.md`)
 - **Windows only**: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload — required to compile `hnswlib` and `greenlet`. Without this, `pip install -e .` will fail.
 
@@ -145,31 +147,66 @@ python run.py
 
 ## Expected runtime behaviour
 
-- **LangChain deprecation warnings** about `ChatOpenAI` and `OpenAIEmbeddings` are harmless — the pinned dependency versions still work.
 - **"bot left game" / "bot connected to the game"** appearing repeatedly between tasks is normal. The environment resets the bot between each task (hard reset: clears inventory, respawns) to ensure a clean state for the next iteration.
 
 # Getting Started
-Voyager uses OpenAI's GPT-4 as the language model. You need to have an OpenAI API key to use Voyager. You can get one from [here](https://platform.openai.com/account/api-keys).
+Voyager uses OpenAI models as the language backbone. You need an OpenAI API key — get one at [platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys).
 
-After the installation process, you can run Voyager by:
+## Quickstart with `.env`
+
+The recommended way to run Voyager is via `run.py`, which reads all configuration from a `.env` file:
+
+```
+MC_PORT=XXXXX
+OPENAI_API_KEY=sk-...
+
+# Optional — override model defaults
+ACTION_MODEL=gpt-5.4-mini
+CURRICULUM_MODEL=gpt-5.4-mini
+CURRICULUM_QA_MODEL=gpt-5.4-nano
+CRITIC_MODEL=gpt-5.4-mini
+SKILL_MODEL=gpt-5.4-nano
+EMBEDDING_MODEL=text-embedding-3-small
+ACTION_ADVANCED_PRIMITIVES=true
+```
+
+Then:
+
+```bash
+python run.py
+```
+
+## Manual instantiation
+
+You can also instantiate `Voyager` directly in Python:
+
 ```python
 from voyager import Voyager
 
-# You can also use mc_port instead of azure_login, but azure_login is highly recommended
+# Use mc_port for a local LAN world, or azure_login for Azure-managed Minecraft
+voyager = Voyager(
+    mc_port=YOUR_MC_PORT,
+    openai_api_key="YOUR_API_KEY",
+)
+
+# start lifelong learning
+voyager.learn()
+```
+
+For `Azure Login`:
+
+```python
 azure_login = {
     "client_id": "YOUR_CLIENT_ID",
     "redirect_url": "https://127.0.0.1/auth-response",
     "secret_value": "[OPTIONAL] YOUR_SECRET_VALUE",
-    "version": "fabric-loader-0.14.18-1.19", # the version Voyager is tested on
+    "version": "fabric-loader-0.14.18-1.19",
 }
-openai_api_key = "YOUR_API_KEY"
 
 voyager = Voyager(
     azure_login=azure_login,
-    openai_api_key=openai_api_key,
+    openai_api_key="YOUR_API_KEY",
 )
-
-# start lifelong learning
 voyager.learn()
 ```
 
@@ -178,7 +215,7 @@ voyager.learn()
   1. Select `Singleplayer` and press `Create New World`.
   2. Set Game Mode to `Creative` and Difficulty to `Peaceful`.
   3. After the world is created, press `Esc` key and press `Open to LAN`.
-  4. Select `Allow cheats: ON` and press `Start LAN World`. You will see the bot join the world soon. 
+  4. Select `Allow cheats: ON` and press `Start LAN World`. You will see the bot join the world soon.
 
 # Resume from a checkpoint during learning
 
@@ -187,8 +224,8 @@ If you stop the learning process and want to resume from a checkpoint later, you
 from voyager import Voyager
 
 voyager = Voyager(
-    azure_login=azure_login,
-    openai_api_key=openai_api_key,
+    mc_port=YOUR_MC_PORT,
+    openai_api_key="YOUR_API_KEY",
     ckpt_dir="YOUR_CKPT_DIR",
     resume=True,
 )
@@ -202,10 +239,10 @@ from voyager import Voyager
 
 # First instantiate Voyager with skill_library_dir.
 voyager = Voyager(
-    azure_login=azure_login,
-    openai_api_key=openai_api_key,
+    mc_port=YOUR_MC_PORT,
+    openai_api_key="YOUR_API_KEY",
     skill_library_dir="./skill_library/trial1", # Load a learned skill library.
-    ckpt_dir="YOUR_CKPT_DIR", # Feel free to use a new dir. Do not use the same dir as skill library because new events will still be recorded to ckpt_dir. 
+    ckpt_dir="YOUR_CKPT_DIR", # Do not use the same dir as skill library — new events are still recorded here.
     resume=False, # Do not resume from a skill library because this is not learning.
 )
 ```

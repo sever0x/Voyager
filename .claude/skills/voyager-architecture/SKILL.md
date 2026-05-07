@@ -10,15 +10,15 @@ Voyager is an LLM-powered autonomous Minecraft agent. It orchestrates four GPT-b
 ## Two-Runtime Overview
 
 ```
-Python process                       Node.js process
-────────────────────────────         ─────────────────────────
-Voyager (orchestrator)               Express HTTP server :3000
-  ├── VoyagerEnv (gym.Env)  ──POST──► /start  (spawn bot)
-  │     └── SubprocessMonitor         /step   (run JS code)
-  ├── ActionAgent  (GPT-4)            /pause  (toggle freeze)
-  ├── CurriculumAgent (GPT-4)         /stop   (disconnect)
-  ├── CriticAgent  (GPT-4)   ◄─JSON── observations
-  ├── SkillManager (GPT-3.5)
+Python process                           Node.js process
+────────────────────────────             ─────────────────────────
+Voyager (orchestrator)                   Express HTTP server :3000
+  ├── VoyagerEnv (gym.Env)  ──POST──►   /start  (spawn bot)
+  │     └── SubprocessMonitor            /step   (run JS code)
+  ├── ActionAgent  (gpt-5.4-mini)        /pause  (toggle freeze)
+  ├── CurriculumAgent (gpt-5.4-mini)     /stop   (disconnect)
+  ├── CriticAgent  (gpt-5.4-mini) ◄─JSON── observations
+  ├── SkillManager (gpt-5.4-nano)
   └── EventRecorder
 ```
 
@@ -69,7 +69,7 @@ Before loop: env.reset("hard")   ← one-time at session start; clears inventory
       SkillManager.add_new_skill(info)
             ├─ GPT-3.5 generates description
             ├─ add to ChromaDB (id = function name)
-            └─ write .js + .txt + skills.json + vectordb.persist()
+            └─ write .js + .txt + skills.json (vectordb auto-persists)
 
 5. CurriculumAgent.update_exploration_progress(info)
       └─ persist completed_tasks.json + failed_tasks.json
@@ -102,10 +102,12 @@ ckpt/
 
 | Dependency | Pinned version | Why |
 |---|---|---|
-| `chromadb` | `0.3.29` | `_collection.count()` and `persist()` API changed in newer versions |
+| `chromadb` | `1.5.9` | Auto-persists on write; `_collection.count()` API used at startup for integrity check |
 | `prismarine-block` | `=1.16.3` | Newer versions break Mineflayer bot logic |
-| `langchain` | `0.0.352` | Uses `langchain.chat_models.ChatOpenAI` and `langchain.embeddings.openai` (deprecated paths) |
+| `langchain` | `1.2.17` | Uses `langchain_openai.ChatOpenAI` / `langchain_chroma`; requires Python ≥ 3.13 |
 | `python-dotenv` | `1.2.1` | Used by `run.py` for `.env` loading |
+
+**Import paths (post-migration)**: `from langchain_openai import ChatOpenAI, OpenAIEmbeddings` and `from langchain_chroma import Chroma`. The old `langchain.chat_models` / `langchain.embeddings.openai` paths no longer exist.
 
 ## Key Non-Obvious Details
 
@@ -131,8 +133,8 @@ These are different files. Both must be migrated.
 
 **ChromaDB QA cache**: Similarity search with L2 threshold `< 0.05` = cache hit. Prevents redundant OpenAI calls for repeated questions about the same biome/context.
 
-**GPT model split**: GPT-4 for ActionAgent, CurriculumAgent (task proposal), CriticAgent. GPT-3.5-turbo for CurriculumAgent QA and SkillManager description generation — simpler tasks, lower cost.
+**Model split**: `gpt-5.4-mini` for ActionAgent, CurriculumAgent (task proposal), and CriticAgent; `gpt-5.4-nano` for CurriculumAgent QA and SkillManager description generation — simpler tasks, lower cost. All models are configurable via `.env` (`ACTION_MODEL`, `CURRICULUM_MODEL`, `CURRICULUM_QA_MODEL`, `CRITIC_MODEL`, `SKILL_MODEL`, `EMBEDDING_MODEL`).
 
-**ActionAgent GPT-3.5 mode**: When `action_agent_model_name="gpt-3.5-turbo"`, `useChest` and `mineflayer` primitives are excluded from the system prompt (too complex for 3.5 to use correctly).
+**Advanced primitives flag**: `action_agent_include_advanced_primitives` (env var `ACTION_ADVANCED_PRIMITIVES`, default `true`) controls whether `useChest` and `mineflayer` primitives are included in the ActionAgent system prompt. Set to `false` when using smaller/weaker models that struggle with complex tool use.
 
 **Warm-up system**: CurriculumAgent has a `warm_up` dict controlling when each observation field appears in the prompt. For example, `context` (QA answers) only appear after 15 completed tasks. Fields with threshold > 0 are included with 80% probability (random dropout for diversity).
