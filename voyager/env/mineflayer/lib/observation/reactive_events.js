@@ -3,14 +3,14 @@ const { Observation } = require("./base.js");
 class ReactiveEvents extends Observation {
     constructor(bot) {
         super(bot);
-        this.name = "reactiveEvents";
-        if (!bot.reactiveEvents) {
-            bot.reactiveEvents = [];
+        this.name = "recentReactiveEvents";
+        if (!bot.recentReactiveEvents) {
+            bot.recentReactiveEvents = [];
         }
     }
 
     observe() {
-        return this.bot.reactiveEvents.slice();
+        return this.bot.recentReactiveEvents.slice();
     }
 }
 

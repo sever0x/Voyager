@@ -240,7 +240,7 @@ app.post("/step", async (req, res) => {
     const code = req.body.code;
     const programs = req.body.programs;
     bot.cumulativeObs = [];
-    bot.reactiveEvents = [];
+    bot.recentReactiveEvents = [];
     if (bot.reactiveAbortFlag) bot.reactiveAbortFlag.current = null;
     await bot.waitForTicks(bot.waitTicks);
     const r = await evaluateCode(code, programs);
