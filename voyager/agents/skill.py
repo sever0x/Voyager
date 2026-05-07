@@ -1,10 +1,9 @@
 import os
 
 import voyager.utils as U
-from langchain.chat_models import ChatOpenAI
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.schema import HumanMessage, SystemMessage
-from langchain.vectorstores import Chroma
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_chroma import Chroma
 
 from voyager.prompts import load_prompt
 from voyager.control_primitives import load_control_primitives
@@ -13,15 +12,16 @@ from voyager.control_primitives import load_control_primitives
 class SkillManager:
     def __init__(
         self,
-        model_name="gpt-3.5-turbo",
+        model_name="gpt-5.4-nano",
         temperature=0,
         retrieval_top_k=5,
         request_timout=120,
         ckpt_dir="ckpt",
         resume=False,
+        embedding_model_name: str = "text-embedding-3-small",
     ):
         self.llm = ChatOpenAI(
-            model_name=model_name,
+            model=model_name,
             temperature=temperature,
             request_timeout=request_timout,
         )
@@ -39,7 +39,7 @@ class SkillManager:
         self.ckpt_dir = ckpt_dir
         self.vectordb = Chroma(
             collection_name="skill_vectordb",
-            embedding_function=OpenAIEmbeddings(),
+            embedding_function=OpenAIEmbeddings(model=embedding_model_name),
             persist_directory=f"{ckpt_dir}/skill/vectordb",
         )
         assert self.vectordb._collection.count() == len(self.skills), (
@@ -70,7 +70,7 @@ class SkillManager:
         )
         if program_name in self.skills:
             print(f"\033[33mSkill {program_name} already exists. Rewriting!\033[0m")
-            self.vectordb._collection.delete(ids=[program_name])
+            self.vectordb.delete(ids=[program_name])
             i = 2
             while f"{program_name}V{i}.js" in os.listdir(f"{self.ckpt_dir}/skill/code"):
                 i += 1
@@ -97,7 +97,6 @@ class SkillManager:
             f"{self.ckpt_dir}/skill/description/{dumped_program_name}.txt",
         )
         U.dump_json(self.skills, f"{self.ckpt_dir}/skill/skills.json")
-        self.vectordb.persist()
 
     def generate_skill_description(self, program_name, program_code):
         messages = [
@@ -108,7 +107,7 @@ class SkillManager:
                 + f"The main function is `{program_name}`."
             ),
         ]
-        skill_description = f"    // { self.llm(messages).content}"
+        skill_description = f"    // { self.llm.invoke(messages).content}"
         return f"async function {program_name}(bot) {{\n{skill_description}\n}}"
 
     def retrieve_skills(self, query):

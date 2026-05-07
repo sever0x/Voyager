@@ -1,19 +1,19 @@
 from voyager.prompts import load_prompt
 from voyager.utils.json_utils import fix_and_parse_json
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 class CriticAgent:
     def __init__(
         self,
-        model_name="gpt-3.5-turbo",
+        model_name="gpt-5.4-mini",
         temperature=0,
         request_timout=120,
         mode="auto",
     ):
         self.llm = ChatOpenAI(
-            model_name=model_name,
+            model=model_name,
             temperature=temperature,
             request_timeout=request_timout,
         )
@@ -98,7 +98,7 @@ class CriticAgent:
         if messages[1] is None:
             return False, ""
 
-        critic = self.llm(messages).content
+        critic = self.llm.invoke(messages).content
         print(f"\033[31m****Critic Agent ai message****\n{critic}\033[0m")
         try:
             response = fix_and_parse_json(critic)

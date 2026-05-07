@@ -1,11 +1,14 @@
 tqdm
-langchain==0.0.352
+langchain==0.3.30
+langchain-openai
+langchain-chroma
+langchain-core
 javascript
 setuptools
 openai
 chardet
 cchardet
-chromadb==0.3.29
+chromadb==1.5.9
 tiktoken
 requests
 setuptools
