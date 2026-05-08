@@ -16,3 +16,6 @@ psutil
 minecraft_launcher_lib
 
 python-dotenv==1.2.1
+
+# Optional providers — install only what you need:
+# pip install langchain-anthropic   # for LLM_PROVIDER=anthropic

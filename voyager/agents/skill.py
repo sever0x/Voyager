@@ -1,7 +1,8 @@
 import os
 
 import voyager.utils as U
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.language_models import BaseChatModel
+from langchain_core.embeddings import Embeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_chroma import Chroma
 
@@ -12,19 +13,13 @@ from voyager.control_primitives import load_control_primitives
 class SkillManager:
     def __init__(
         self,
-        model_name="gpt-5.4-nano",
-        temperature=0,
+        llm: BaseChatModel,
+        embeddings: Embeddings,
         retrieval_top_k=5,
-        request_timout=120,
         ckpt_dir="ckpt",
         resume=False,
-        embedding_model_name: str = "text-embedding-3-small",
     ):
-        self.llm = ChatOpenAI(
-            model=model_name,
-            temperature=temperature,
-            request_timeout=request_timout,
-        )
+        self.llm = llm
         U.f_mkdir(f"{ckpt_dir}/skill/code")
         U.f_mkdir(f"{ckpt_dir}/skill/description")
         U.f_mkdir(f"{ckpt_dir}/skill/vectordb")
@@ -39,7 +34,7 @@ class SkillManager:
         self.ckpt_dir = ckpt_dir
         self.vectordb = Chroma(
             collection_name="skill_vectordb",
-            embedding_function=OpenAIEmbeddings(model=embedding_model_name),
+            embedding_function=embeddings,
             persist_directory=f"{ckpt_dir}/skill/vectordb",
         )
         assert self.vectordb._collection.count() == len(self.skills), (
