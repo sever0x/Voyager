@@ -21,7 +21,7 @@ The buddy should feel like a capable teammate, not a scripted NPC. It keeps itse
 
 See [ROADMAP.md](ROADMAP.md) for the full six-phase development plan.
 
-**Current status: Phase 1 — Architectural Foundations** (dual-layer reactive/strategic architecture, persistent session state, survival mode support).
+**Current status: Phase 1 complete ✅ — moving to Phase 2 (Survival Core).**
 
 ---
 
@@ -185,7 +185,7 @@ Six phases from architectural foundations to Ender Dragon defeat:
 
 | Phase | Goal | Status |
 |---|---|---|
-| 1 | Architectural Foundations (dual-layer, persistent state, survival mode) | In progress |
+| 1 | Architectural Foundations (dual-layer, persistent state, survival mode) | ✅ Complete |
 | 2 | Survival Core (hunger, shelter, mobs, basic chat) | Planned |
 | 3 | Progression & Tech Tree (iron→netherite, Nether, enchanting, End prep) | Planned |
 | 4 | Communication & Personality (NLP chat, proactive messages) | Planned |

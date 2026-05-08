@@ -31,7 +31,7 @@ Each phase has a companion document in `docs/roadmap/` with full technical decis
 
 **Why first:** These are not features — they are prerequisites. Persistence, real-time operation, and survival mode are all required before a single survival mechanic can be implemented.
 
-**Progress: 1.1 complete, 1.2 partial, 1.3–1.4 not started.** See `docs/roadmap/phase-1-architectural-foundations.md` for per-file status.
+**Progress: ✅ Complete.** All four blockers implemented. See [`docs/wiki/phase-1-foundations.md`](docs/wiki/phase-1-foundations.md) for a full implementation summary.
 
 ---
 
@@ -117,7 +117,7 @@ The entire system assumes Creative + Peaceful. Prompts, observation parsing, and
 
 **Phase 1 Milestone:** The bot runs in Survival mode without crashing or resetting its inventory when damaged. It reacts to taking damage without waiting for an LLM call. The player can observe the bot in the world.
 
-> **Current status:** 1.1 ✅ reactive layer implemented and tested. 1.2 ✅ `reset_mode` param added, inventory preserved between tasks in survival mode. Remaining: player observation (1.3), survival prompts and override (1.4).
+> **Current status:** ✅ All four blockers complete. Reactive layer running, inventory preserved in survival mode, `nearbyPlayers` in observation space, survival override active when `GAME_MODE=survival`. Known gap: `"none"` reset mode not yet distinct from `"soft"` at Node.js level — deferred to Phase 2.
 
 ---
 
