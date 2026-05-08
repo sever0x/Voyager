@@ -127,6 +127,7 @@ app.post("/start", (req, res) => {
         ]);
         skills.inject(bot);
         initReactiveEngine(bot);
+        bot.game_mode = req.body.game_mode || "creative";
 
         if (req.body.spread) {
             bot.chat(`/spreadplayers ~ ~ 0 300 under 80 false @s`);
@@ -137,8 +138,10 @@ app.post("/start", (req, res) => {
         res.json(bot.observe());
 
         initCounter(bot);
-        bot.chat("/gamerule keepInventory true");
-        bot.chat("/gamerule doDaylightCycle false");
+        if (bot.game_mode !== "survival") {
+            bot.chat("/gamerule keepInventory true");
+            bot.chat("/gamerule doDaylightCycle false");
+        }
     });
 
     function onConnectionFailed(e) {
@@ -250,7 +253,9 @@ app.post("/step", async (req, res) => {
     if (r !== "success") {
         bot.emit("error", handleError(r));
     }
-    await returnItems();
+    if (bot.game_mode !== "survival") {
+        await returnItems();
+    }
     // wait for last message
     await bot.waitForTicks(bot.waitTicks);
     if (!response_sent) {

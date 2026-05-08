@@ -148,6 +148,7 @@ class VoyagerEnv(gym.Env):
             "waitTicks": options.get("wait_ticks", 5),
             "position": options.get("position", None),
             "version": self.mc_version,
+            "game_mode": options.get("game_mode", "creative"),
         }
 
         self.unpause()

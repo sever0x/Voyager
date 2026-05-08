@@ -183,6 +183,7 @@ class Voyager:
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
         self.reset_mode = reset_mode
+        self.game_mode = os.environ.get("GAME_MODE", "creative")
 
         # init variables for rollout
         self.action_agent_rollout_num_iter = -1
@@ -201,16 +202,20 @@ class Voyager:
                 options={
                     "mode": "soft",
                     "wait_ticks": self.env_wait_ticks,
+                    "game_mode": self.game_mode,
                 }
             )
         difficulty = (
             "easy" if len(self.curriculum_agent.completed_tasks) > 15 else "peaceful"
         )
         # step to peek an observation
-        events = self.env.step(
-            "bot.chat(`/time set ${getNextTime()}`);\n"
-            + f"bot.chat('/difficulty {difficulty}');"
-        )
+        if self.game_mode == "creative":
+            events = self.env.step(
+                "bot.chat(`/time set ${getNextTime()}`);\n"
+                + f"bot.chat('/difficulty {difficulty}');"
+            )
+        else:
+            events = self.env.step("")
         skills = self.skill_manager.retrieve_skills(query=self.context)
         print(
             f"\033[33mRender Action Agent system message with {len(skills)} skills\033[0m"
