@@ -322,6 +322,33 @@ class Voyager:
                 break
         return messages, reward, done, info
 
+    def _propose_next_task(self, game_mode):
+        if game_mode == "survival":
+            last_obs = self.last_events[-1][1]
+            health = last_obs["status"]["health"]
+            food = last_obs["status"]["food"]
+            is_on_fire = last_obs["status"].get("isOnFire", False)
+            if is_on_fire:
+                return (
+                    "Find water to extinguish the fire",
+                    "The bot is on fire. Finding water is the immediate priority.",
+                )
+            if health < 6:
+                return (
+                    "Eat food or find safety to restore health",
+                    "Health is critically low (below 3 hearts). Survival is the only priority.",
+                )
+            if food < 6:
+                return (
+                    "Find and eat food immediately",
+                    "Hunger is critically low. Eating is required before any other action.",
+                )
+        return self.curriculum_agent.propose_next_task(
+            events=self.last_events,
+            chest_observation=self.action_agent.render_chest_observation(),
+            max_retries=5,
+        )
+
     def learn(self, reset_env=True):
         if self.resume:
             self.env.reset(
@@ -340,15 +367,13 @@ class Voyager:
             self.resume = True
         self.last_events = self.env.step("")
 
+        game_mode = os.environ.get("GAME_MODE", "creative")
+
         while True:
             if self.recorder.iteration > self.max_iterations:
                 print("Iteration limit reached")
                 break
-            task, context = self.curriculum_agent.propose_next_task(
-                events=self.last_events,
-                chest_observation=self.action_agent.render_chest_observation(),
-                max_retries=5,
-            )
+            task, context = self._propose_next_task(game_mode)
             print(
                 f"\033[35mStarting task {task} for at most {self.action_agent_task_max_retries} times\033[0m"
             )
