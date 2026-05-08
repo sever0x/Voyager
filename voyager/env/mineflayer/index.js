@@ -14,6 +14,7 @@ const Inventory = require("./lib/observation/inventory");
 const OnSave = require("./lib/observation/onSave");
 const Chests = require("./lib/observation/chests");
 const ReactiveEvents = require("./lib/observation/reactive_events");
+const Players = require("./lib/observation/players");
 const { initReactiveEngine } = require("./lib/reactive/index");
 const { plugin: tool } = require("mineflayer-tool");
 
@@ -122,6 +123,7 @@ app.post("/start", (req, res) => {
             Chests,
             BlockRecords,
             ReactiveEvents,
+            Players,
         ]);
         skills.inject(bot);
         initReactiveEngine(bot);
