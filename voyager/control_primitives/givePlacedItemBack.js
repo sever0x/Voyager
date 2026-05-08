@@ -1,4 +1,5 @@
 async function givePlacedItemBack(bot, name, position) {
+    if (bot.game_mode === "survival") return;
     await bot.chat("/gamerule doTileDrops false");
     // iterate name and position
     const history = [];

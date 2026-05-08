@@ -360,6 +360,7 @@ class Voyager:
                 options={
                     "mode": "soft",
                     "wait_ticks": self.env_wait_ticks,
+                    "game_mode": self.game_mode,
                 }
             )
         else:
@@ -367,6 +368,7 @@ class Voyager:
                 options={
                     "mode": self.reset_mode,
                     "wait_ticks": self.env_wait_ticks,
+                    "game_mode": self.game_mode,
                 }
             )
             self.resume = True
@@ -400,6 +402,7 @@ class Voyager:
                         options={
                             "mode": "hard",
                             "wait_ticks": self.env_wait_ticks,
+                            "game_mode": self.game_mode,
                             "inventory": self.last_events[-1][1]["inventory"],
                             "equipment": self.last_events[-1][1]["status"]["equipment"],
                             "position": self.last_events[-1][1]["status"]["position"],
@@ -410,6 +413,7 @@ class Voyager:
                         options={
                             "mode": "soft",
                             "wait_ticks": self.env_wait_ticks,
+                            "game_mode": self.game_mode,
                         }
                     )
                 # use red color background to print the error
@@ -439,6 +443,7 @@ class Voyager:
                 options={
                     "mode": "hard",
                     "wait_ticks": self.env_wait_ticks,
+                    "game_mode": self.game_mode,
                 }
             )
         return self.curriculum_agent.decompose_task(task, self.last_events)
@@ -452,6 +457,7 @@ class Voyager:
             options={
                 "mode": reset_mode,
                 "wait_ticks": self.env_wait_ticks,
+                "game_mode": self.game_mode,
             }
         )
         self.curriculum_agent.completed_tasks = []

@@ -12,6 +12,7 @@ This wiki documents the internal architecture, implementation decisions, and pha
 |---|---|
 | [Architecture Overview](architecture.md) | How the two-runtime system works; Python/Node.js split; observation space; communication patterns |
 | [Phase 1 — Architectural Foundations](phase-1-foundations.md) | What was built in Phase 1, why each change was needed, and the exact files that changed |
+| [Phase 2 — Prerequisites](phase-2-prerequisites.md) | Training scaffolding commands gated by GAME_MODE; prerequisite before any Phase 2 feature |
 
 Roadmap technical design documents (pre-implementation specs) live in [`docs/roadmap/`](../roadmap/):
 - [`phase-1-architectural-foundations.md`](../roadmap/phase-1-architectural-foundations.md)
@@ -24,7 +25,7 @@ Roadmap technical design documents (pre-implementation specs) live in [`docs/roa
 | Phase | Name | Status |
 |---|---|---|
 | 1 | Architectural Foundations | ✅ Complete |
-| 2 | Survival Core | 🔲 Not started |
+| 2 | Survival Core | 🔄 In progress (prerequisites complete) |
 | 3 | Progression & Tech Tree | 🔲 Not started |
 | 4 | Communication & Personality | 🔲 Not started |
 | 5 | Cooperative Logic | 🔲 Not started |
