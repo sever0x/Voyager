@@ -117,10 +117,12 @@ class ActionAgent:
                 entities = event["status"]["entities"]
                 health = event["status"]["health"]
                 hunger = event["status"]["food"]
+                is_on_fire = event["status"].get("isOnFire", False)
                 position = event["status"]["position"]
                 equipment = event["status"]["equipment"]
                 inventory_used = event["status"]["inventoryUsed"]
                 inventory = event["inventory"]
+                nearby_players = event.get("nearbyPlayers", [])
                 assert i == len(events) - 1, "observe must be the last event"
 
         observation = ""
@@ -161,9 +163,19 @@ class ActionAgent:
         else:
             observation += f"Nearby entities (nearest to farthest): None\n\n"
 
+        if nearby_players:
+            players_str = ", ".join(
+                [f"{p['username']} ({p['distance']}m)" for p in nearby_players]
+            )
+            observation += f"Nearby players (nearest to farthest): {players_str}\n\n"
+        else:
+            observation += f"Nearby players (nearest to farthest): None\n\n"
+
         observation += f"Health: {health:.1f}/20\n\n"
 
         observation += f"Hunger: {hunger:.1f}/20\n\n"
+
+        observation += f"On fire: {is_on_fire}\n\n"
 
         observation += f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n"
 

@@ -31,9 +31,11 @@ Each phase has a companion document in `docs/roadmap/` with full technical decis
 
 **Why first:** These are not features — they are prerequisites. Persistence, real-time operation, and survival mode are all required before a single survival mechanic can be implemented.
 
+**Progress: ✅ Complete.** All four blockers implemented. See [`docs/wiki/phase-1-foundations.md`](docs/wiki/phase-1-foundations.md) for a full implementation summary.
+
 ---
 
-### 1.1 — Dual-Layer Architecture (Reactive + Strategic)
+### 1.1 — Dual-Layer Architecture (Reactive + Strategic) ✅
 
 **The core blocker.** Currently the bot pauses the entire game while waiting for an LLM response (1–3 seconds per step). Combat, hunger crises, and fall damage cannot wait 3 seconds.
 
@@ -67,7 +69,7 @@ The `pause`/`unpause` calls must be removed from the hot path. LLM calls must be
 
 ---
 
-### 1.2 — Persistent Session State (Remove Hard Reset)
+### 1.2 — Persistent Session State (Remove Hard Reset) ✅
 
 Currently `env.reset("hard")` clears the bot's inventory and kills it between every task. In survival, inventory is accumulated progress — destroying it between tasks is fatal to the concept.
 
@@ -114,6 +116,8 @@ The entire system assumes Creative + Peaceful. Prompts, observation parsing, and
 ---
 
 **Phase 1 Milestone:** The bot runs in Survival mode without crashing or resetting its inventory when damaged. It reacts to taking damage without waiting for an LLM call. The player can observe the bot in the world.
+
+> **Current status:** ✅ All four blockers complete. Reactive layer running, inventory preserved in survival mode, `nearbyPlayers` in observation space, survival override active when `GAME_MODE=survival`. Known gap: `"none"` reset mode not yet distinct from `"soft"` at Node.js level — deferred to Phase 2.
 
 ---
 

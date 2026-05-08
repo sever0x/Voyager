@@ -54,6 +54,7 @@ class Voyager:
         ckpt_dir: str = "ckpt",
         skill_library_dir: str = None,
         resume: bool = False,
+        reset_mode: str = "hard",
     ):
         """
         The main class for Voyager.
@@ -105,6 +106,9 @@ class Voyager:
         :param ckpt_dir: checkpoint dir
         :param skill_library_dir: skill library dir
         :param resume: whether to resume from checkpoint
+        :param reset_mode: "hard" clears inventory and kills bot between tasks (Creative default),
+            "soft" reconnects without clearing inventory (Survival default),
+            "none" continues without any reset (future use)
         """
         # init env
         self.env = VoyagerEnv(
@@ -178,6 +182,7 @@ class Voyager:
         )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
+        self.reset_mode = reset_mode
 
         # init variables for rollout
         self.action_agent_rollout_num_iter = -1
@@ -317,9 +322,35 @@ class Voyager:
                 break
         return messages, reward, done, info
 
+    def _propose_next_task(self, game_mode):
+        if game_mode == "survival":
+            last_obs = self.last_events[-1][1]
+            health = last_obs["status"]["health"]
+            food = last_obs["status"]["food"]
+            is_on_fire = last_obs["status"].get("isOnFire", False)
+            if is_on_fire:
+                return (
+                    "Find water to extinguish the fire",
+                    "The bot is on fire. Finding water is the immediate priority.",
+                )
+            if health < 6:
+                return (
+                    "Eat food or find safety to restore health",
+                    "Health is critically low (below 3 hearts). Survival is the only priority.",
+                )
+            if food < 6:
+                return (
+                    "Find and eat food immediately",
+                    "Hunger is critically low. Eating is required before any other action.",
+                )
+        return self.curriculum_agent.propose_next_task(
+            events=self.last_events,
+            chest_observation=self.action_agent.render_chest_observation(),
+            max_retries=5,
+        )
+
     def learn(self, reset_env=True):
         if self.resume:
-            # keep the inventory
             self.env.reset(
                 options={
                     "mode": "soft",
@@ -327,25 +358,22 @@ class Voyager:
                 }
             )
         else:
-            # clear the inventory
             self.env.reset(
                 options={
-                    "mode": "hard",
+                    "mode": self.reset_mode,
                     "wait_ticks": self.env_wait_ticks,
                 }
             )
             self.resume = True
         self.last_events = self.env.step("")
 
+        game_mode = os.environ.get("GAME_MODE", "creative")
+
         while True:
             if self.recorder.iteration > self.max_iterations:
                 print("Iteration limit reached")
                 break
-            task, context = self.curriculum_agent.propose_next_task(
-                events=self.last_events,
-                chest_observation=self.action_agent.render_chest_observation(),
-                max_retries=5,
-            )
+            task, context = self._propose_next_task(game_mode)
             print(
                 f"\033[35mStarting task {task} for at most {self.action_agent_task_max_retries} times\033[0m"
             )
@@ -362,15 +390,23 @@ class Voyager:
                     "success": False,
                 }
                 # reset bot status here
-                self.last_events = self.env.reset(
-                    options={
-                        "mode": "hard",
-                        "wait_ticks": self.env_wait_ticks,
-                        "inventory": self.last_events[-1][1]["inventory"],
-                        "equipment": self.last_events[-1][1]["status"]["equipment"],
-                        "position": self.last_events[-1][1]["status"]["position"],
-                    }
-                )
+                if self.reset_mode == "hard":
+                    self.last_events = self.env.reset(
+                        options={
+                            "mode": "hard",
+                            "wait_ticks": self.env_wait_ticks,
+                            "inventory": self.last_events[-1][1]["inventory"],
+                            "equipment": self.last_events[-1][1]["status"]["equipment"],
+                            "position": self.last_events[-1][1]["status"]["position"],
+                        }
+                    )
+                else:
+                    self.last_events = self.env.reset(
+                        options={
+                            "mode": "soft",
+                            "wait_ticks": self.env_wait_ticks,
+                        }
+                    )
                 # use red color background to print the error
                 print("Your last round rollout terminated due to error:")
                 print(f"\033[41m{e}\033[0m")

@@ -112,7 +112,6 @@ class VoyagerEnv(gym.Env):
         if not self.has_reset:
             raise RuntimeError("Environment has not been reset yet")
         self.check_process()
-        self.unpause()
         data = {
             "code": code,
             "programs": programs,
@@ -123,7 +122,6 @@ class VoyagerEnv(gym.Env):
         if res.status_code != 200:
             raise RuntimeError("Failed to step Minecraft server")
         returned_data = res.json()
-        self.pause()
         return json.loads(returned_data)
 
     def render(self):

@@ -85,8 +85,10 @@ class CurriculumAgent:
             "nearby_blocks": 0,
             "other_blocks": 10,
             "nearby_entities": 5,
+            "nearby_players": 0,
             "health": 15,
             "hunger": 15,
+            "on_fire": 0,
             "position": 0,
             "equipment": 0,
             "inventory": 0,
@@ -105,8 +107,10 @@ class CurriculumAgent:
             "nearby_blocks",
             "other_blocks",
             "nearby_entities",
+            "nearby_players",
             "health",
             "hunger",
+            "on_fire",
             "position",
             "equipment",
             "inventory",
@@ -134,10 +138,12 @@ class CurriculumAgent:
         entities = event["status"]["entities"]
         health = event["status"]["health"]
         hunger = event["status"]["food"]
+        is_on_fire = event["status"].get("isOnFire", False)
         position = event["status"]["position"]
         equipment = event["status"]["equipment"]
         inventory_used = event["status"]["inventoryUsed"]
         inventory = event["inventory"]
+        nearby_players = event.get("nearbyPlayers", [])
 
         if not any(
             "dirt" in block
@@ -163,6 +169,14 @@ class CurriculumAgent:
             else "None"
         )
 
+        nearby_players_str = (
+            ", ".join(
+                [f"{p['username']} ({p['distance']}m)" for p in nearby_players]
+            )
+            if nearby_players
+            else "None"
+        )
+
         completed_tasks = (
             ", ".join(self.completed_tasks) if self.completed_tasks else "None"
         )
@@ -183,8 +197,10 @@ class CurriculumAgent:
             "nearby_blocks": f"Nearby blocks: {', '.join(voxels) if voxels else 'None'}\n\n",
             "other_blocks": f"Other blocks that are recently seen: {other_blocks}\n\n",
             "nearby_entities": f"Nearby entities: {nearby_entities}\n\n",
+            "nearby_players": f"Nearby players (nearest to farthest): {nearby_players_str}\n\n",
             "health": f"Health: {health:.1f}/20\n\n",
             "hunger": f"Hunger: {hunger:.1f}/20\n\n",
+            "on_fire": f"On fire: {is_on_fire}\n\n",
             "position": f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n",
             "equipment": f"Equipment: {equipment}\n\n",
             "inventory": f"Inventory ({inventory_used}/36): {inventory if inventory else 'Empty'}\n\n",

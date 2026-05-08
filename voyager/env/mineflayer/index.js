@@ -13,6 +13,9 @@ const Status = require("./lib/observation/status");
 const Inventory = require("./lib/observation/inventory");
 const OnSave = require("./lib/observation/onSave");
 const Chests = require("./lib/observation/chests");
+const ReactiveEvents = require("./lib/observation/reactive_events");
+const Players = require("./lib/observation/players");
+const { initReactiveEngine } = require("./lib/reactive/index");
 const { plugin: tool } = require("mineflayer-tool");
 
 let bot = null;
@@ -119,8 +122,11 @@ app.post("/start", (req, res) => {
             OnSave,
             Chests,
             BlockRecords,
+            ReactiveEvents,
+            Players,
         ]);
         skills.inject(bot);
+        initReactiveEngine(bot);
 
         if (req.body.spread) {
             bot.chat(`/spreadplayers ~ ~ 0 300 under 80 false @s`);
@@ -236,6 +242,8 @@ app.post("/step", async (req, res) => {
     const code = req.body.code;
     const programs = req.body.programs;
     bot.cumulativeObs = [];
+    bot.recentReactiveEvents = [];
+    if (bot.reactiveAbortFlag) bot.reactiveAbortFlag.current = null;
     await bot.waitForTicks(bot.waitTicks);
     const r = await evaluateCode(code, programs);
     process.off("uncaughtException", otherError);

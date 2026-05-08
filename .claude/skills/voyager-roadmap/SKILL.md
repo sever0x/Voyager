@@ -38,29 +38,36 @@ Mark each item:
 - 🔄 Partial — file exists but key content missing, or only partially implemented
 - ⬜ Not started — file does not exist
 
-### Phase 1 — Architectural Foundations
+### Phase 1 — Architectural Foundations ✅ COMPLETE
 
-**1.1 Dual-Layer Architecture**
-- `voyager/env/mineflayer/lib/reactive/index.js` — exists?
-- `voyager/env/mineflayer/lib/reactive/priorities.js` — exists?
-- `voyager/env/mineflayer/lib/reactive/rules.js` — exists?
-- `voyager/env/mineflayer/lib/reactive/actions.js` — exists?
-- `voyager/env/mineflayer/index.js` — contains `recentReactiveEvents`?
-- `voyager/env/mineflayer/index.js` — `env.pause()` / `env.unpause()` removed from step hot path? (grep for `pause` calls inside step loop)
+**1.1 Dual-Layer Architecture** ✅
+- `voyager/env/mineflayer/lib/reactive/index.js` — exists ✅
+- `voyager/env/mineflayer/lib/reactive/priorities.js` — exists ✅
+- `voyager/env/mineflayer/lib/reactive/rules.js` — exists ✅
+- `voyager/env/mineflayer/lib/reactive/actions.js` — exists ✅
+- `voyager/env/mineflayer/index.js` — contains `recentReactiveEvents` ✅
+- `voyager/env/bridge.py` `step()` — no `pause`/`unpause` calls (only in `reset()`, which is correct) ✅
 
-**1.2 Persistent Session State**
-- `voyager/env/bridge.py` — contains `reset_mode`?
-- `voyager/env/mineflayer/index.js` — `/clear` and `/kill` inside conditional (not unconditional)?
+**1.2 Persistent Session State** ✅
+- `voyager/voyager.py` — contains `reset_mode` param and `self.reset_mode` ✅
+- `voyager/env/bridge.py` — `options.get("mode", "hard")` passes reset mode to Node.js ✅
+- `voyager/env/mineflayer/index.js` — `/clear @s` and `/kill @s` inside `if (req.body.reset === "hard")` ✅
+- Known gap: `"none"` reset mode (no disconnect) is not yet distinct from `"soft"` at the Node.js level — deferred
 
-**1.3 Player in Observation Space**
-- `voyager/env/mineflayer/lib/observation/players.js` — exists?
-- `voyager/env/mineflayer/index.js` — contains `nearbyPlayers`?
+**1.3 Player in Observation Space** ✅
+- `voyager/env/mineflayer/lib/observation/players.js` — exists ✅
+- `voyager/env/mineflayer/index.js` — `Players` in `obs.inject(...)` list ✅
+- `voyager/agents/curriculum.py` — parses `nearbyPlayers` from events, renders in observation ✅
+- `voyager/agents/action.py` — parses `nearbyPlayers` from events, renders in observation ✅
 
-**1.4 Survival Mode Support**
-- `voyager/prompts/curriculum.txt` — contains `Survival status` section?
-- `voyager/prompts/action_template.txt` — contains `Survival status` section?
-- `.env.example` — contains `GAME_MODE`?
-- `voyager/voyager.py` — contains survival override logic (health/hunger threshold check before `propose_next_task`)?
+**1.4 Survival Mode Support** ✅
+- `.env.example` — contains `GAME_MODE` ✅
+- `voyager/env/mineflayer/lib/observation/status.js` — contains `isOnFire` and `isDaytime` ✅
+- `voyager/prompts/curriculum.txt` — contains `Nearby players`, `On fire`, updated Health/Hunger thresholds ✅
+- `voyager/prompts/action_template.txt` — contains `Nearby players`, `On fire` ✅
+- `voyager/voyager.py` — contains `_propose_next_task(game_mode)` with fire/health/food threshold override ✅
+- `voyager/agents/curriculum.py` — parses `isOnFire`, adds `on_fire` and `nearby_players` to observation dict ✅
+- `voyager/agents/action.py` — parses `isOnFire`, renders `On fire` and `Nearby players` in observation ✅
 
 ### Phase 2 — Survival Core
 
@@ -75,7 +82,7 @@ Mark each item:
 
 **2.3 Shelter Building + Experience Memory**
 - `voyager/agents/survival_memory.py` — exists?
-- `voyager/prompts/curriculum.txt` — building restriction removed? (should NOT contain the phrase "placing, building, planting, and trading tasks should be avoided")
+- `voyager/prompts/curriculum.txt` — building restriction removed? (should NOT contain the phrase "placing, building, planting, and trading tasks should be avoided") ✅ already removed in Phase 1.4
 - `voyager/prompts/curriculum.txt` — contains survival experiences section? (grep for `survival` or `experiences`)
 
 **2.4 Basic Chat Commands**
@@ -95,7 +102,7 @@ Mark each item:
 Present a table per phase with item and status. Then:
 
 ```
-Phase 1: X/10 items complete
+Phase 1: COMPLETE (all items done, one known gap: "none" reset mode not distinct from "soft" at Node.js level)
 Phase 2: X/16 items complete
 
 Next recommended item: [specific file/feature to implement next, based on the implementation order in the phase docs]
@@ -144,7 +151,7 @@ These are the decisions most likely to be second-guessed during implementation:
 
 ## Guidance on implementation order within phases
 
-Phase 1 order (from the technical doc): dual-layer reactive files → remove pause from hot path → reset_mode → players observation → survival mode prompts.
+Phase 1: **COMPLETE.** All four blockers implemented across branches leading to `buddy/phase1`.
 
 Phase 2 order: food reactive rules → fight/flee + pillarUp → survival_memory.py + experiences checkpoint → chat.js → shelter observation (isSheltered) + home.json → death handler.
 

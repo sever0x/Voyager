@@ -299,20 +299,34 @@ When `GAME_MODE=survival`:
 
 ## File Change Summary
 
-| File | Change |
-|---|---|
-| `voyager/env/mineflayer/lib/reactive/index.js` | New — reactive engine entry point |
-| `voyager/env/mineflayer/lib/reactive/priorities.js` | New — priority constants, AbortError |
-| `voyager/env/mineflayer/lib/reactive/rules.js` | New — rule definitions |
-| `voyager/env/mineflayer/lib/reactive/actions.js` | New — emergency action implementations |
-| `voyager/env/mineflayer/lib/observation/players.js` | New — nearbyPlayers observation module |
-| `voyager/env/mineflayer/index.js` | Modified — initialize reactive engine, add reset_mode to /start, add recentReactiveEvents to observations |
-| `voyager/env/bridge.py` | Modified — add reset_mode param, pass to /start |
-| `voyager/voyager.py` | Modified — remove forced hard reset from learn(), add survival override call |
-| `voyager/agents/curriculum_agent.py` | Modified — parse nearbyPlayers, add survival override integration |
-| `voyager/agents/action_agent.py` | Modified — parse nearbyPlayers and survival stats |
-| `voyager/prompts/curriculum.txt` | Modified — add survival status section and survival rule |
-| `voyager/prompts/action_template.txt` | Modified — add survival status section |
-| `voyager/prompts/critic.txt` | Modified — add survival state to success evaluation criteria |
-| `voyager/control_primitives/mineBlock.js` | Modified — add abort flag check in loop |
-| `.env.example` | Modified — add GAME_MODE variable |
+| Status | File | Change |
+|---|---|---|
+| ✅ Done | `voyager/env/mineflayer/lib/reactive/index.js` | New — reactive engine entry point |
+| ✅ Done | `voyager/env/mineflayer/lib/reactive/priorities.js` | New — priority constants, AbortError |
+| ✅ Done | `voyager/env/mineflayer/lib/reactive/rules.js` | New — rule definitions |
+| ✅ Done | `voyager/env/mineflayer/lib/reactive/actions.js` | New — emergency action implementations |
+| ✅ Done | `voyager/env/mineflayer/lib/observation/reactive_events.js` | New — recentReactiveEvents observation module (not in original plan, added during implementation) |
+| ✅ Done | `voyager/env/mineflayer/index.js` | Modified — initialize reactive engine, add recentReactiveEvents to observations, clear events at /step start |
+| ✅ Done | `voyager/env/bridge.py` | pause/unpause removed from step() hot path; reset_mode flows through existing options dict |
+| ✅ Done | `voyager/voyager.py` | reset_mode param added to __init__; learn() uses it for initial and error-recovery resets |
+| ⬜ Not started | `voyager/env/mineflayer/lib/observation/players.js` | New — nearbyPlayers observation module |
+| ⬜ Not started | `voyager/voyager.py` | Modified — remove forced hard reset from learn(), add survival override call |
+| ⬜ Not started | `voyager/agents/curriculum_agent.py` | Modified — parse nearbyPlayers, add survival override integration |
+| ⬜ Not started | `voyager/agents/action_agent.py` | Modified — parse nearbyPlayers and survival stats |
+| ⬜ Not started | `voyager/prompts/curriculum.txt` | Modified — add survival status section and survival rule |
+| ⬜ Not started | `voyager/prompts/action_template.txt` | Modified — add survival status section |
+| ⬜ Not started | `voyager/prompts/critic.txt` | Modified — add survival state to success evaluation criteria |
+| ⬜ Not started | `voyager/control_primitives/mineBlock.js` | Modified — add abort flag check in loop |
+| ⬜ Not started | `.env.example` | Modified — add GAME_MODE variable |
+
+## Implementation Notes
+
+Decisions made during implementation that deviate from or extend the original design:
+
+**Fire detection — block-based instead of entity metadata.** The original design referenced `bot.on('onFire')` and entity metadata bit 0. In practice, Mineflayer's `entity.metadata` format is ambiguous across versions. The implemented approach checks `bot.blockAt(pos)` for `fire` / `soul_fire` block names, which is reliable in all versions and detects the hazard before damage occurs.
+
+**Priority 0 mechanism — `physicsTick` + `entityHurt` hybrid.** The design specified purely event-driven Priority 0 via `bot.on('entityHurt')`. In testing, `entityHurt` does not fire in Creative mode (no damage), making it unsuitable as the sole trigger. The implementation uses `physicsTick` (corrected spelling from deprecated `physicTick`) for position-based detection (works in all game modes) and adds `entityHurt` as a supplement for Survival mode.
+
+**`escapeFromHazard` action.** The original design scoped Priority 0 actions to "move to water, step away from lava" without a concrete implementation. The implemented `escapeFromHazard` uses direct control states (sprint + jump) rather than pathfinder navigation, which is more reliable when the bot is actively taking damage and pathfinder may be slow or confused.
+
+**`reset_mode` in bridge.py — partially done.** The `pause`/`unpause` calls were removed from `step()` (game no longer freezes between LLM calls). The `reset_mode` parameter itself (passing `"none"` / `"soft"` / `"hard"` from Python to Node.js) is not yet implemented — this is the remaining item for Blocker 2.
