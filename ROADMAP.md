@@ -129,7 +129,7 @@ The entire system assumes Creative + Peaceful. Prompts, observation parsing, and
 
 ---
 
-### 2.1 — Hunger and Food Management
+### 2.1 — Hunger and Food Management ✅
 
 - Reactive layer auto-eats from inventory when hunger < 6 points
 - Strategic layer prioritizes food gathering when no food is available
@@ -193,6 +193,8 @@ The curriculum prompt explicitly forbids building tasks. This must be revised fo
 - LLM-powered interpretation added in Phase 4; this is rule-based
 
 ---
+
+> **Current status:** 1/7 items complete. Feature 2.1 (Hunger and Food Management) done: reactive auto-eat with saturation-priority food queue, `noFood` event propagation, game-mode gating throughout Node.js and Python, and Python food task hierarchy (smelt → hunt → craft bread → explore). Feature 2.2 (Hostile Mob Handling + `pillarUp`) is next.
 
 **Phase 2 Milestone:** Bot survives three consecutive Minecraft days in Survival/Normal difficulty solo. It builds a basic shelter before the first night, maintains food, handles hostile mobs, and responds to simple player chat commands.
 

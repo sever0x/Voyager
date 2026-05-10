@@ -71,8 +71,16 @@ Mark each item:
 
 ### Phase 2 — Survival Core
 
-**2.1 Food Management**
-- `voyager/env/mineflayer/lib/reactive/rules.js` — contains hunger threshold / auto-eat logic?
+**2.1 Food Management** ✅
+- `voyager/env/mineflayer/lib/reactive/rules.js` — contains `checkHunger()` with `hunger_critical` (≤4) and `hunger_low` (≤8) thresholds ✅
+- `voyager/env/mineflayer/lib/reactive/actions.js` — contains `eatBestFood()` with `FOOD_PRIORITY` list (cooked > raw, saturation-first) and `noFood` event emission ✅
+- `voyager/env/mineflayer/lib/reactive/index.js` — `eatInProgress` flag, wired to p2 (500ms) and p3 (2000ms) intervals ✅
+- `voyager/env/mineflayer/index.js` — survival game_mode gating: no `keepInventory`, no `doDaylightCycle false`, no `returnItems()` ✅
+- `voyager/control_primitives/givePlacedItemBack.js` — early return in survival mode ✅
+- `voyager/env/bridge.py` — passes `game_mode` to Node.js in reset payload ✅
+- `voyager/voyager.py` — `_get_food_task()` with 4-level hierarchy (smelt raw meat → hunt animal → craft bread → explore); `_propose_next_task` uses consolidated `food_emergency` check ✅
+- `voyager/agents/curriculum.py` — `_FOOD_ITEMS` constant; `food_items` observation field extracted before warm-up filter; `"food_items"` in `curriculum_observations` and `default_warmup` ✅
+- `voyager/prompts/curriculum.txt` — `Food in inventory:` field between Hunger and On fire; rule 7 updated with decision tree ✅
 
 **2.2 Hostile Mob Handling + Pillar**
 - `voyager/control_primitives/pillarUp.js` — exists?
@@ -103,7 +111,7 @@ Present a table per phase with item and status. Then:
 
 ```
 Phase 1: COMPLETE (all items done, one known gap: "none" reset mode not distinct from "soft" at Node.js level)
-Phase 2: X/16 items complete
+Phase 2: 1/6 features complete
 
 Next recommended item: [specific file/feature to implement next, based on the implementation order in the phase docs]
 ```
@@ -153,6 +161,6 @@ These are the decisions most likely to be second-guessed during implementation:
 
 Phase 1: **COMPLETE.** All four blockers implemented across branches leading to `buddy/phase1`.
 
-Phase 2 order: food reactive rules → fight/flee + pillarUp → survival_memory.py + experiences checkpoint → chat.js → shelter observation (isSheltered) + home.json → death handler.
+Phase 2 order: ~~food reactive rules~~ ✅ → **fight/flee + pillarUp** (next) → survival_memory.py + experiences checkpoint → chat.js → shelter observation (isSheltered) + home.json → death handler.
 
 If the user asks "what should I implement first?", give the specific next uncompleted item from the relevant phase checklist, not a general answer.
