@@ -343,6 +343,12 @@ class Voyager:
                     "Eat food or find safety to restore health",
                     "Health is critically low (below 3 hearts). Survival is the only priority.",
                 )
+            recent_events = last_obs.get("recentReactiveEvents", [])
+            if any(e.get("trigger") == "noFood" for e in recent_events):
+                return (
+                    "Find food — hunt animals, gather crops, or explore for food sources",
+                    "No food in inventory. The reactive layer consumed the last food. Food gathering is the immediate priority.",
+                )
             if food < 6:
                 return (
                     "Find and eat food immediately",

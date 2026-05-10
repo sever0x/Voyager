@@ -23,4 +23,14 @@ function checkCritical(bot) {
     return null;
 }
 
-module.exports = { checkCritical, isInFireBlock };
+function checkHunger(bot) {
+    if (bot.food <= 4) {
+        return { priority: 2, trigger: "hunger_critical", action: "eat_food" };
+    }
+    if (bot.food <= 8) {
+        return { priority: 3, trigger: "hunger_low", action: "eat_food" };
+    }
+    return null;
+}
+
+module.exports = { checkCritical, isInFireBlock, checkHunger };

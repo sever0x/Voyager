@@ -1,6 +1,15 @@
 const { goals: { GoalBlock } } = require("mineflayer-pathfinder");
 const { isInFireBlock } = require("./rules");
 
+const FOOD_PRIORITY = [
+    "cooked_beef", "cooked_porkchop",
+    "cooked_mutton", "cooked_chicken",
+    "bread",
+    "cooked_salmon", "cooked_cod",
+    "apple",
+    "beef", "porkchop", "mutton", "chicken", "salmon", "cod",
+];
+
 async function escapeFromHazard(bot) {
     if (bot.pathfinder) bot.pathfinder.setGoal(null);
 
@@ -33,4 +42,35 @@ async function escapeFromHazard(bot) {
     bot.setControlState("jump", false);
 }
 
-module.exports = { escapeFromHazard };
+async function eatBestFood(bot) {
+    const mcData = require("minecraft-data")(bot.version);
+
+    let foodItem = null;
+    for (const name of FOOD_PRIORITY) {
+        const itemData = mcData.itemsByName[name];
+        if (!itemData) continue;
+        const item = bot.inventory.findInventoryItem(itemData.id, null);
+        if (item) {
+            foodItem = item;
+            break;
+        }
+    }
+
+    if (!foodItem) {
+        bot.noFood = true;
+        bot.recentReactiveEvents.push({
+            trigger: "noFood",
+            action: "none",
+            timestamp: Date.now(),
+            outcome: "triggered",
+        });
+        return;
+    }
+
+    bot.noFood = false;
+    await bot.equip(foodItem, "hand");
+    bot.activateItem();
+    await bot.waitForTicks(40);
+}
+
+module.exports = { escapeFromHazard, eatBestFood };

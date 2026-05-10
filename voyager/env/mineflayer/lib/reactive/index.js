@@ -1,6 +1,6 @@
 const { PRIORITY, POLL_INTERVAL_MS } = require("./priorities");
-const { checkCritical } = require("./rules");
-const { escapeFromHazard } = require("./actions");
+const { checkCritical, checkHunger } = require("./rules");
+const { escapeFromHazard, eatBestFood } = require("./actions");
 
 function initReactiveEngine(bot) {
     const abortFlag = { current: null };
@@ -17,6 +17,7 @@ function initReactiveEngine(bot) {
 
     let criticalInProgress = false;
     let escapeInProgress = false;
+    let eatInProgress = false;
 
     function handleCriticalResult(result) {
         if (!criticalInProgress) {
@@ -59,14 +60,30 @@ function initReactiveEngine(bot) {
         if (abortFlag.current !== null && abortFlag.current <= PRIORITY.HIGH) return;
     }, POLL_INTERVAL_MS[PRIORITY.HIGH]);
 
-    // Priority 2 (500ms) — Phase 2: hunger ≤ 4, hostile mob ≤ 6 blocks checks
+    // Priority 2 (500ms) — hunger ≤ 4: eat immediately; hostile mob ≤ 6 blocks (Phase 2.2)
     const p2 = setInterval(() => {
         if (abortFlag.current !== null && abortFlag.current <= PRIORITY.MEDIUM) return;
+        const hungerResult = checkHunger(bot);
+        if (hungerResult && hungerResult.trigger === "hunger_critical" && !eatInProgress) {
+            eatInProgress = true;
+            emitEvent(hungerResult);
+            eatBestFood(bot)
+                .catch(() => {})
+                .finally(() => { eatInProgress = false; });
+        }
     }, POLL_INTERVAL_MS[PRIORITY.MEDIUM]);
 
-    // Priority 3 (2000ms) — Phase 2: hunger ≤ 8, hostile mob ≤ 15 blocks checks
+    // Priority 3 (2000ms) — hunger ≤ 8: soft warning; hostile mob ≤ 15 blocks (Phase 2.2)
     const p3 = setInterval(() => {
         if (abortFlag.current !== null && abortFlag.current <= PRIORITY.LOW) return;
+        const hungerResult = checkHunger(bot);
+        if (hungerResult && hungerResult.trigger === "hunger_low" && !eatInProgress) {
+            eatInProgress = true;
+            emitEvent(hungerResult);
+            eatBestFood(bot)
+                .catch(() => {})
+                .finally(() => { eatInProgress = false; });
+        }
     }, POLL_INTERVAL_MS[PRIORITY.LOW]);
 
     bot._reactiveIntervals = [p1, p2, p3];
