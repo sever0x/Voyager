@@ -1,5 +1,12 @@
 const FIRE_BLOCKS = new Set(["fire", "soul_fire"]);
 
+const HOSTILE_MOBS = new Set([
+    "zombie", "skeleton", "creeper", "spider", "cave_spider",
+    "enderman", "witch", "pillager", "vindicator", "phantom",
+    "drowned", "husk", "stray", "blaze", "ghast", "slime",
+    "magma_cube", "zombie_villager", "zombie_pigman", "piglin_brute",
+]);
+
 function isInFireBlock(bot) {
     const pos = bot.entity.position;
     const feet = bot.blockAt(pos);
@@ -33,4 +40,41 @@ function checkHunger(bot) {
     return null;
 }
 
-module.exports = { checkCritical, isInFireBlock, checkHunger };
+function checkHostileMobs(bot, radius) {
+    const mobs = Object.values(bot.entities).filter(
+        (e) =>
+            e.displayName &&
+            e.name !== "player" &&
+            e.name !== "item" &&
+            HOSTILE_MOBS.has(e.name) &&
+            e.position != null &&
+            e.position.distanceTo(bot.entity.position) <= radius
+    );
+    return mobs.length > 0 ? mobs : null;
+}
+
+function decideFightOrFlee(bot, mobs) {
+    if (bot.health < 16) return "flee";
+
+    const closeCreeper = mobs.find(
+        (m) =>
+            m.name === "creeper" &&
+            m.position.distanceTo(bot.entity.position) < 5
+    );
+    if (closeCreeper) return "flee";
+
+    const heldItem = bot.heldItem;
+    const hasWeapon =
+        heldItem &&
+        (heldItem.name.includes("sword") || heldItem.name.includes("axe"));
+    if (!hasWeapon) return "flee";
+
+    const spiders = mobs.filter(
+        (m) => m.name === "spider" || m.name === "cave_spider"
+    );
+    if (spiders.length > 1) return "flee";
+
+    return "fight";
+}
+
+module.exports = { checkCritical, isInFireBlock, checkHunger, checkHostileMobs, decideFightOrFlee };
