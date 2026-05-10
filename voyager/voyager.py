@@ -13,6 +13,13 @@ from .agents import CriticAgent
 from .agents import CurriculumAgent
 from .agents import SkillManager
 
+_RAW_MEATS = frozenset({"beef", "porkchop", "mutton", "chicken", "salmon", "cod"})
+_WEAPON_NAMES = frozenset({
+    "wooden_sword", "stone_sword", "iron_sword", "golden_sword",
+    "diamond_sword", "netherite_sword", "bow", "crossbow",
+})
+_ANIMAL_MOBS = frozenset({"cow", "pig", "chicken", "sheep", "rabbit"})
+
 
 # TODO: remove event memory
 class Voyager:
@@ -327,6 +334,44 @@ class Voyager:
                 break
         return messages, reward, done, info
 
+    def _get_food_task(self, last_obs):
+        inventory = last_obs.get("inventory", {})
+        voxels = last_obs.get("voxels", [])
+        entities = last_obs["status"].get("entities", {})
+
+        raw_in_inv = [(m, inventory[m]) for m in _RAW_MEATS if m in inventory]
+        if raw_in_inv and "furnace" in voxels:
+            meat, count = max(raw_in_inv, key=lambda x: x[1])
+            return (
+                f"Smelt {count} {meat}",
+                f"You have {count} {meat} and a furnace is nearby. Smelt it for food.",
+            )
+
+        has_weapon = any(w in inventory for w in _WEAPON_NAMES)
+        nearby_animals = sorted(
+            [a for a in _ANIMAL_MOBS if a in entities],
+            key=lambda a: entities[a],
+        )
+        if has_weapon and nearby_animals:
+            target = nearby_animals[0]
+            return (
+                f"Kill 1 {target} for food",
+                f"You have a weapon and a {target} is nearby. Kill it for food.",
+            )
+
+        wheat_count = inventory.get("wheat", 0)
+        if wheat_count >= 3:
+            bread_count = wheat_count // 3
+            return (
+                f"Craft {bread_count} bread",
+                f"You have {wheat_count} wheat. Craft bread (3 wheat = 1 bread) for food.",
+            )
+
+        return (
+            "Explore to find food — look for animals or crops",
+            "No immediate food source available. Explore to find animals, crops, or naturally generated food.",
+        )
+
     def _propose_next_task(self, game_mode):
         if game_mode == "survival":
             last_obs = self.last_events[-1][1]
@@ -344,16 +389,12 @@ class Voyager:
                     "Health is critically low (below 3 hearts). Survival is the only priority.",
                 )
             recent_events = last_obs.get("recentReactiveEvents", [])
-            if any(e.get("trigger") == "noFood" for e in recent_events):
-                return (
-                    "Find food — hunt animals, gather crops, or explore for food sources",
-                    "No food in inventory. The reactive layer consumed the last food. Food gathering is the immediate priority.",
-                )
-            if food < 6:
-                return (
-                    "Find and eat food immediately",
-                    "Hunger is critically low. Eating is required before any other action.",
-                )
+            food_emergency = (
+                any(e.get("trigger") == "noFood" for e in recent_events)
+                or food < 6
+            )
+            if food_emergency:
+                return self._get_food_task(last_obs)
         return self.curriculum_agent.propose_next_task(
             events=self.last_events,
             chest_observation=self.action_agent.render_chest_observation(),

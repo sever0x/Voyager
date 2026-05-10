@@ -9,6 +9,12 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_chroma import Chroma
 
+_FOOD_ITEMS = frozenset({
+    "cooked_beef", "cooked_porkchop", "cooked_mutton", "cooked_chicken",
+    "cooked_salmon", "cooked_cod", "bread", "apple",
+    "beef", "porkchop", "mutton", "chicken", "salmon", "cod",
+})
+
 
 class CurriculumAgent:
     def __init__(
@@ -88,6 +94,7 @@ class CurriculumAgent:
             "nearby_players": 0,
             "health": 15,
             "hunger": 15,
+            "food_items": 0,
             "on_fire": 0,
             "position": 0,
             "equipment": 0,
@@ -110,6 +117,7 @@ class CurriculumAgent:
             "nearby_players",
             "health",
             "hunger",
+            "food_items",
             "on_fire",
             "position",
             "equipment",
@@ -182,6 +190,13 @@ class CurriculumAgent:
         )
         failed_tasks = ", ".join(self.failed_tasks) if self.failed_tasks else "None"
 
+        food_in_inventory = {k: v for k, v in inventory.items() if k in _FOOD_ITEMS}
+        food_inventory_str = (
+            ", ".join(f"{k} x{v}" for k, v in food_in_inventory.items())
+            if food_in_inventory
+            else "None"
+        )
+
         # filter out optional inventory items if required
         if self.progress < self.warm_up["optional_inventory_items"]:
             inventory = {
@@ -200,6 +215,7 @@ class CurriculumAgent:
             "nearby_players": f"Nearby players (nearest to farthest): {nearby_players_str}\n\n",
             "health": f"Health: {health:.1f}/20\n\n",
             "hunger": f"Hunger: {hunger:.1f}/20\n\n",
+            "food_items": f"Food in inventory: {food_inventory_str}\n\n",
             "on_fire": f"On fire: {is_on_fire}\n\n",
             "position": f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n",
             "equipment": f"Equipment: {equipment}\n\n",
