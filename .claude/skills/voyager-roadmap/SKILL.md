@@ -82,11 +82,21 @@ Mark each item:
 - `voyager/agents/curriculum.py` — `_FOOD_ITEMS` constant; `food_items` observation field extracted before warm-up filter; `"food_items"` in `curriculum_observations` and `default_warmup` ✅
 - `voyager/prompts/curriculum.txt` — `Food in inventory:` field between Hunger and On fire; rule 7 updated with decision tree ✅
 
-**2.2 Hostile Mob Handling + Pillar**
-- `voyager/control_primitives/pillarUp.js` — exists?
-- `voyager/control_primitives_context/pillarUp.js` — exists?
-- `voyager/env/mineflayer/lib/reactive/rules.js` — contains fight/flee mob logic?
-- `voyager/env/mineflayer/lib/reactive/actions.js` — contains `pillarUp` call or `fleeFromMobs`?
+**2.2 Hostile Mob Handling + Pillar** ✅
+- `voyager/control_primitives/pillarUp.js` — exists ✅
+- `voyager/control_primitives_context/pillarUp.js` — exists ✅
+- `voyager/env/mineflayer/lib/reactive/rules.js` — contains `HOSTILE_MOBS` set, `checkHostileMobs()`, `decideFightOrFlee()`, `hasWeapon()` ✅
+- `voyager/env/mineflayer/lib/reactive/actions.js` — contains `fleeFromMobs`, `fightMob`, `tryEquipWeapon`, `pillarUpReactive` ✅
+- `voyager/env/mineflayer/lib/reactive/index.js` — `fleeInProgress` and `fightInProgress` flags; mob check at 6 blocks (p2) and 15 blocks (p3) ✅
+- `voyager/prompts/curriculum.txt` — rule 10: craft weapon before evening if none in inventory ✅
+
+Key implementation notes for future validation:
+- `hasWeapon(bot)` checks hand AND full inventory (dual method: `findInventoryItem` + `items().find()`)
+- Spider threshold is `>= 1` (always flee from any spider, not just 2+)
+- Flee loop re-asserts `pathfinder.setGoal(null)` every 5 ticks to prevent LLM pathfinder override; jumps every 5 ticks to navigate terrain obstacles
+- `pillarUpReactive` uses try-catch around all pathfinder calls; default height 3 (not 4) for speed (~1s vs 1.8s)
+- `fightMob` has 15s hard timeout + `pvp.stop()` to prevent infinite hang
+- Fight branch also awaits `tryEquipWeapon` before `pvp.attack` if no weapon in hand
 
 **2.3 Shelter Building + Experience Memory**
 - `voyager/agents/survival_memory.py` — exists?
@@ -161,6 +171,6 @@ These are the decisions most likely to be second-guessed during implementation:
 
 Phase 1: **COMPLETE.** All four blockers implemented across branches leading to `buddy/phase1`.
 
-Phase 2 order: ~~food reactive rules~~ ✅ → **fight/flee + pillarUp** (next) → survival_memory.py + experiences checkpoint → chat.js → shelter observation (isSheltered) + home.json → death handler.
+Phase 2 order: ~~food reactive rules~~ ✅ → ~~fight/flee + pillarUp~~ ✅ → **survival_memory.py + experiences checkpoint** (next) → chat.js → shelter observation (isSheltered) + home.json → death handler.
 
 If the user asks "what should I implement first?", give the specific next uncompleted item from the relevant phase checklist, not a general answer.
