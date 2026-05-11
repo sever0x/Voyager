@@ -138,23 +138,23 @@ The entire system assumes Creative + Peaceful. Prompts, observation parsing, and
 
 ---
 
-### 2.2 — Health Management and Hazard Avoidance
+### 2.2 — Health Management and Hazard Avoidance 🔄
 
-- Reactive layer flees from engagements when health < 4 hearts (2 full hearts)
-- Bot avoids standing in lava, fire, or cactus
-- Bot understands fall damage — uses water bucket placement before long falls
-- Healing priority: natural regeneration if food is full; potions if available
+- Reactive layer flees from engagements when health < 8 hearts ✅ (implemented inside 2.3 fight/flee logic)
+- Bot avoids standing in lava and fire ✅ (Phase 1 reactive layer); cactus — deferred
+- Bot understands fall damage — uses water bucket placement before long falls — deferred
+- Healing priority: natural regeneration if food is full; potions if available — deferred
 
 ---
 
-### 2.3 — Hostile Mob Handling
+### 2.3 — Hostile Mob Handling ✅
 
 The curriculum currently bans any task involving hostile mobs as defenders. In survival, mobs are an environmental constant, not optional tasks.
 
-- Reactive layer attacks mobs that enter within 5 blocks
-- Strategic layer decides: fight (if equipped) or flee (if not)
-- Night is recognized as a high-threat period
-- CurriculumAgent proposes combat gear crafting before nightfall
+- Reactive layer attacks mobs that enter within 6 blocks ✅
+- Strategic layer decides: fight (if equipped) or flee (if not) ✅
+- Night is recognized as a high-threat period ✅
+- CurriculumAgent proposes combat gear crafting before nightfall ✅
 
 ---
 
@@ -194,7 +194,7 @@ The curriculum prompt explicitly forbids building tasks. This must be revised fo
 
 ---
 
-> **Current status:** 1/7 items complete. Feature 2.1 (Hunger and Food Management) done: reactive auto-eat with saturation-priority food queue, `noFood` event propagation, game-mode gating throughout Node.js and Python, and Python food task hierarchy (smelt → hunt → craft bread → explore). Feature 2.2 (Hostile Mob Handling + `pillarUp`) is next.
+> **Current status:** Items 2.1 and 2.3 fully complete; 2.2 partially complete (health flee and lava/fire done, fall damage handling and potion use deferred). 2.1 — reactive auto-eat, saturation-priority food queue, `noFood` propagation, Python food task hierarchy. 2.3 — fight/flee decision tree, `HOSTILE_MOBS` detection at 6 and 15 blocks, `fleeFromMobs` with sprint+jump escalation to `pillarUpReactive`, `fightMob` with 15s timeout, `pillarUp` control primitive, `tryEquipWeapon` with dual-method inventory search, curriculum rule for weapon crafting before evening. Next: 2.4 Shelter Building and Experience-Based Learning.
 
 **Phase 2 Milestone:** Bot survives three consecutive Minecraft days in Survival/Normal difficulty solo. It builds a basic shelter before the first night, maintains food, handles hostile mobs, and responds to simple player chat commands.
 
