@@ -79,7 +79,7 @@ function initReactiveEngine(bot) {
         if (mobs6 && !fleeInProgress && !fightInProgress) {
             const decision = decideFightOrFlee(bot, mobs6);
             const heldItem = bot.heldItem;
-            const weaponEquipped =
+            const weaponInHand =
                 heldItem &&
                 (heldItem.name.includes("sword") || heldItem.name.includes("axe"));
 
@@ -87,7 +87,7 @@ function initReactiveEngine(bot) {
                 fleeInProgress = true;
                 emitEvent({ priority: 2, trigger: "mob_flee", action: "flee" });
                 (async () => {
-                    if (!weaponEquipped) await tryEquipWeapon(bot).catch(() => {});
+                    if (!weaponInHand) await tryEquipWeapon(bot).catch(() => {});
                     await fleeFromMobs(bot, mobs6).catch(() => {});
                 })().finally(() => { fleeInProgress = false; });
             } else {
@@ -99,9 +99,10 @@ function initReactiveEngine(bot) {
                 , mobs6[0]);
                 fightInProgress = true;
                 emitEvent({ priority: 2, trigger: "mob_fight", action: "fight" });
-                fightMob(bot, target)
-                    .catch(() => {})
-                    .finally(() => { fightInProgress = false; });
+                (async () => {
+                    if (!weaponInHand) await tryEquipWeapon(bot).catch(() => {});
+                    await fightMob(bot, target).catch(() => {});
+                })().finally(() => { fightInProgress = false; });
             }
         }
     }, POLL_INTERVAL_MS[PRIORITY.MEDIUM]);

@@ -85,39 +85,47 @@ async function tryEquipWeapon(bot) {
     for (const name of WEAPON_PRIORITY) {
         const itemData = mcData.itemsByName[name];
         if (!itemData) continue;
-        const item = bot.inventory.findInventoryItem(itemData.id, null);
+        const item =
+            bot.inventory.findInventoryItem(itemData.id, null) ||
+            bot.inventory.items().find((i) => i.name === name);
         if (item) {
-            await bot.equip(item, "hand");
-            return true;
+            try {
+                await bot.equip(item, "hand");
+                return true;
+            } catch (_) {
+                continue;
+            }
         }
     }
     return false;
 }
 
-async function pillarUpReactive(bot, height = 4) {
+async function pillarUpReactive(bot, height = 3) {
     const mcData = require("minecraft-data")(bot.version);
     let pillarItem = null;
     for (const name of PILLAR_MATERIALS) {
         const itemData = mcData.itemsByName[name];
         if (!itemData) continue;
-        const item = bot.inventory.findInventoryItem(itemData.id, null);
+        const item =
+            bot.inventory.findInventoryItem(itemData.id, null) ||
+            bot.inventory.items().find((i) => i.name === name);
         if (item) { pillarItem = item; break; }
     }
     if (!pillarItem) return;
 
+    try { if (bot.pathfinder) bot.pathfinder.setGoal(null); } catch (_) {}
     await bot.equip(pillarItem, "hand");
 
     for (let i = 0; i < height; i++) {
+        try { if (bot.pathfinder) bot.pathfinder.setGoal(null); } catch (_) {}
         bot.setControlState("jump", true);
-        await bot.waitForTicks(6);
+        await bot.waitForTicks(5);
         const blockBelow = bot.blockAt(bot.entity.position.offset(0, -1, 0));
         if (blockBelow) {
-            try {
-                await bot.placeBlock(blockBelow, new Vec3(0, 1, 0));
-            } catch (_) {}
+            try { await bot.placeBlock(blockBelow, new Vec3(0, 1, 0)); } catch (_) {}
         }
         bot.setControlState("jump", false);
-        await bot.waitForTicks(3);
+        await bot.waitForTicks(2);
     }
 }
 
@@ -151,10 +159,13 @@ async function fleeFromMobs(bot, mobs) {
     await bot.lookAt(lookTarget.offset(0, 0.5, 0));
 
     for (let t = 0; t < 8; t++) {
-        if (bot.pathfinder) bot.pathfinder.setGoal(null);
+        try { if (bot.pathfinder) bot.pathfinder.setGoal(null); } catch (_) {}
         bot.setControlState("sprint", true);
         bot.setControlState("forward", true);
-        await bot.waitForTicks(5);
+        await bot.waitForTicks(3);
+        bot.setControlState("jump", true);
+        await bot.waitForTicks(2);
+        bot.setControlState("jump", false);
         if (abortFlag && abortFlag.current !== null) break;
     }
 

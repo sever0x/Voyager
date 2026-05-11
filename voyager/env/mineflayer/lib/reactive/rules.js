@@ -53,6 +53,14 @@ function checkHostileMobs(bot, radius) {
     return mobs.length > 0 ? mobs : null;
 }
 
+function hasWeapon(bot) {
+    const held = bot.heldItem;
+    if (held && (held.name.includes("sword") || held.name.includes("axe"))) return true;
+    return bot.inventory.items().some(
+        (i) => i.name.includes("sword") || i.name.includes("axe")
+    );
+}
+
 function decideFightOrFlee(bot, mobs) {
     if (bot.health < 16) return "flee";
 
@@ -63,16 +71,12 @@ function decideFightOrFlee(bot, mobs) {
     );
     if (closeCreeper) return "flee";
 
-    const heldItem = bot.heldItem;
-    const hasWeapon =
-        heldItem &&
-        (heldItem.name.includes("sword") || heldItem.name.includes("axe"));
-    if (!hasWeapon) return "flee";
+    if (!hasWeapon(bot)) return "flee";
 
     const spiders = mobs.filter(
         (m) => m.name === "spider" || m.name === "cave_spider"
     );
-    if (spiders.length > 1) return "flee";
+    if (spiders.length >= 1) return "flee";
 
     return "fight";
 }
