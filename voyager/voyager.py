@@ -12,6 +12,7 @@ from .agents import ActionAgent
 from .agents import CriticAgent
 from .agents import CurriculumAgent
 from .agents import SkillManager
+from .agents import SurvivalMemory
 
 _RAW_MEATS = frozenset({"beef", "porkchop", "mutton", "chicken", "salmon", "cod"})
 _WEAPON_NAMES = frozenset({
@@ -187,6 +188,11 @@ class Voyager:
             ckpt_dir=skill_library_dir if skill_library_dir else ckpt_dir,
             resume=True if resume or skill_library_dir else False,
         )
+        self.survival_memory = SurvivalMemory(
+            llm=skill_llm,
+            ckpt_dir=ckpt_dir,
+            resume=resume,
+        )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
         self.reset_mode = reset_mode
@@ -259,6 +265,7 @@ class Voyager:
                 programs=self.skill_manager.programs,
             )
             self.recorder.record(events, self.task)
+            self._process_survival_events(events)
             self.action_agent.update_chest_memory(events[-1][1]["nearbyChests"])
             success, critique = self.critic_agent.check_task_success(
                 events=events,
@@ -334,6 +341,46 @@ class Voyager:
                 break
         return messages, reward, done, info
 
+    def _process_survival_events(self, events):
+        if self.game_mode != "survival":
+            return
+        last_obs = events[-1][1]
+        status = last_obs.get("status", {})
+        reactive = last_obs.get("recentReactiveEvents", [])
+
+        for e in reactive:
+            if e.get("trigger") == "bot_death":
+                context = (
+                    f"timeOfDay={status.get('timeOfDay', 'unknown')}, "
+                    f"biome={status.get('biome', 'unknown')}, "
+                    f"isSheltered={status.get('isSheltered', False)}"
+                )
+                self.survival_memory.record_event(
+                    "death", e.get("inferred_cause", "unknown"), context
+                )
+
+        damage_events = [e for e in reactive if e.get("trigger") == "significant_damage"]
+        if damage_events:
+            worst = max(damage_events, key=lambda e: e.get("damage_amount", 0))
+            context = (
+                f"damage={worst['damage_amount']:.1f}hp, "
+                f"health_after={worst['health_after']:.1f}/20, "
+                f"biome={status.get('biome', 'unknown')}, "
+                f"timeOfDay={status.get('timeOfDay', 'unknown')}"
+            )
+            self.survival_memory.record_event(
+                "significant_damage", worst.get("damage_source", "unknown"), context
+            )
+
+        for event_type, event in events:
+            if event_type == "onSave" and event.get("onSave") == "shelter_built":
+                context = (
+                    f"isSheltered=True, "
+                    f"biome={status.get('biome', 'unknown')}, "
+                    f"timeOfDay={status.get('timeOfDay', 'unknown')}"
+                )
+                self.survival_memory.record_event("shelter_built", "player_skill", context)
+
     def _get_food_task(self, last_obs):
         inventory = last_obs.get("inventory", {})
         voxels = last_obs.get("voxels", [])
@@ -395,10 +442,16 @@ class Voyager:
             )
             if food_emergency:
                 return self._get_food_task(last_obs)
+        survival_lessons = (
+            self.survival_memory.get_recent_lessons()
+            if self.game_mode == "survival"
+            else ""
+        )
         return self.curriculum_agent.propose_next_task(
             events=self.last_events,
             chest_observation=self.action_agent.render_chest_observation(),
             max_retries=5,
+            survival_lessons=survival_lessons,
         )
 
     def learn(self, reset_env=True):

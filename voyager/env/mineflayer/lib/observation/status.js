@@ -1,4 +1,5 @@
 const Observation = require("./base.js").Observation;
+const { checkSheltered } = require("./shelter");
 
 class Status extends Observation {
     constructor(bot) {
@@ -7,6 +8,7 @@ class Status extends Observation {
     }
 
     observe() {
+        const { isSheltered } = checkSheltered(this.bot);
         return {
             health: this.bot.health,
             food: this.bot.food,
@@ -34,6 +36,7 @@ class Status extends Observation {
             timeOfDay: this.getTime(),
             inventoryUsed: this.bot.inventoryUsed(),
             elapsedTime: this.bot.globalTickCounter,
+            isSheltered,
         };
     }
 

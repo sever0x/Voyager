@@ -81,4 +81,4 @@ function decideFightOrFlee(bot, mobs) {
     return "fight";
 }
 
-module.exports = { checkCritical, isInFireBlock, checkHunger, checkHostileMobs, decideFightOrFlee };
+module.exports = { checkCritical, isInFireBlock, checkHunger, checkHostileMobs, decideFightOrFlee, HOSTILE_MOBS };
