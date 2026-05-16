@@ -9,6 +9,12 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_chroma import Chroma
 
+_FOOD_ITEMS = frozenset({
+    "cooked_beef", "cooked_porkchop", "cooked_mutton", "cooked_chicken",
+    "cooked_salmon", "cooked_cod", "bread", "apple",
+    "beef", "porkchop", "mutton", "chicken", "salmon", "cod",
+})
+
 
 class CurriculumAgent:
     def __init__(
@@ -88,7 +94,9 @@ class CurriculumAgent:
             "nearby_players": 0,
             "health": 15,
             "hunger": 15,
+            "food_items": 0,
             "on_fire": 0,
+            "shelter": 0,
             "position": 0,
             "equipment": 0,
             "inventory": 0,
@@ -110,7 +118,9 @@ class CurriculumAgent:
             "nearby_players",
             "health",
             "hunger",
+            "food_items",
             "on_fire",
+            "shelter",
             "position",
             "equipment",
             "inventory",
@@ -139,6 +149,7 @@ class CurriculumAgent:
         health = event["status"]["health"]
         hunger = event["status"]["food"]
         is_on_fire = event["status"].get("isOnFire", False)
+        is_sheltered = event["status"].get("isSheltered", False)
         position = event["status"]["position"]
         equipment = event["status"]["equipment"]
         inventory_used = event["status"]["inventoryUsed"]
@@ -182,6 +193,13 @@ class CurriculumAgent:
         )
         failed_tasks = ", ".join(self.failed_tasks) if self.failed_tasks else "None"
 
+        food_in_inventory = {k: v for k, v in inventory.items() if k in _FOOD_ITEMS}
+        food_inventory_str = (
+            ", ".join(f"{k} x{v}" for k, v in food_in_inventory.items())
+            if food_in_inventory
+            else "None"
+        )
+
         # filter out optional inventory items if required
         if self.progress < self.warm_up["optional_inventory_items"]:
             inventory = {
@@ -200,7 +218,9 @@ class CurriculumAgent:
             "nearby_players": f"Nearby players (nearest to farthest): {nearby_players_str}\n\n",
             "health": f"Health: {health:.1f}/20\n\n",
             "hunger": f"Hunger: {hunger:.1f}/20\n\n",
+            "food_items": f"Food in inventory: {food_inventory_str}\n\n",
             "on_fire": f"On fire: {is_on_fire}\n\n",
+            "shelter": f"Sheltered: {is_sheltered}\n\n",
             "position": f"Position: x={position['x']:.1f}, y={position['y']:.1f}, z={position['z']:.1f}\n\n",
             "equipment": f"Equipment: {equipment}\n\n",
             "inventory": f"Inventory ({inventory_used}/36): {inventory if inventory else 'Empty'}\n\n",
@@ -210,7 +230,7 @@ class CurriculumAgent:
         }
         return observation
 
-    def render_human_message(self, *, events, chest_observation):
+    def render_human_message(self, *, events, chest_observation, survival_lessons=""):
         content = ""
         observation = self.render_observation(
             events=events, chest_observation=chest_observation
@@ -238,10 +258,13 @@ class CurriculumAgent:
                 if should_include:
                     content += observation[key]
 
+        lessons_text = survival_lessons if survival_lessons else "None"
+        content += f"Recent survival experiences (most recent first):\n{lessons_text}\n\n"
+
         print(f"\033[35m****Curriculum Agent human message****\n{content}\033[0m")
         return HumanMessage(content=content)
 
-    def propose_next_task(self, *, events, chest_observation, max_retries=5):
+    def propose_next_task(self, *, events, chest_observation, max_retries=5, survival_lessons=""):
         if self.progress == 0 and self.mode == "auto":
             task = "Mine 1 wood log"
             context = "You can mine one of oak, birch, spruce, jungle, acacia, dark oak, or mangrove logs."
@@ -282,7 +305,9 @@ class CurriculumAgent:
         messages = [
             self.render_system_message(),
             self.render_human_message(
-                events=events, chest_observation=chest_observation
+                events=events,
+                chest_observation=chest_observation,
+                survival_lessons=survival_lessons,
             ),
         ]
 

@@ -62,7 +62,7 @@ Additionally, all of these produce visible chat messages. In a co-op session, th
 
 ## What Was Changed
 
-**Three files, seven edit points.**
+**Four files, nine edit points.**
 
 ### `voyager/voyager.py`
 
@@ -79,7 +79,7 @@ Additionally, all of these produce visible chat messages. In a co-op session, th
        events = self.env.step("")
    ```
 
-3. **`reset()`** — added `"game_mode": self.game_mode` to the `env.reset()` options dict so the value flows to Node.js.
+3. **All seven `env.reset()` calls** — `"game_mode": self.game_mode` added to every `options` dict. This is critical: the bot reconnects on every task transition, error recovery, and at session start. If even one reset call omits `game_mode`, Node.js defaults to `"creative"` and re-enables the cheat gamerules on that reconnect. The seven call sites are: `rollout()`, `learn()` (resume branch), `learn()` (fresh start branch), `learn()` (error recovery hard), `learn()` (error recovery soft), `decompose_task()`, and `inference()`.
 
 ### `voyager/env/bridge.py`
 
@@ -107,6 +107,19 @@ Additionally, all of these produce visible chat messages. In a co-op session, th
        await returnItems();
    }
    ```
+
+### `voyager/control_primitives/givePlacedItemBack.js`
+
+8. **Function body** — early return in survival mode:
+   ```js
+   async function givePlacedItemBack(bot, name, position) {
+       if (bot.game_mode === "survival") return;
+       // ... rest unchanged
+   }
+   ```
+   This primitive uses `/gamerule doTileDrops false` and `/give bot ${name} 1` to reclaim placed blocks. It was not gated by the `returnItems()` fix in `index.js` because it is a separate file that ActionAgent-generated skill code can call directly. Without this guard, a generated skill could silently cheat mid-execution even in survival mode.
+
+9. **`index.js`** — `bot.game_mode` is now set before `skills.inject(bot)` runs, so the value is available to any skill code evaluated in that session, including calls to `givePlacedItemBack`.
 
 ---
 

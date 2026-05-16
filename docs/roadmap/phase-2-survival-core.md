@@ -71,31 +71,36 @@ if health < 8 hearts:
 elif mob_type == "creeper" AND distance < 5 blocks:
     → flee (explosion radius: 3 blocks, 1.5s fuse, not worth engaging)
 
-elif no weapon in hand:
-    → flee + attempt to equip best available melee weapon from inventory
+elif no weapon in hand AND no weapon in inventory:
+    → flee
 
-elif mob_type in ["spider", "cave_spider"] AND count > 1:
-    → flee (multiple spiders overwhelm single melee quickly)
+elif mob_type in ["spider", "cave_spider"]:
+    → flee (spiders are fast, climb pillars, any engagement is risky)
+    [NOTE: Originally designed as count > 1, changed to >= 1 during testing —
+     a single spider is already dangerous enough to warrant retreat]
 
-elif weapon equipped AND health >= 8:
-    → engage using existing killMob primitive
+elif weapon in hand or inventory AND health >= 8:
+    → equip best weapon if not already in hand, then engage via bot.pvp.attack()
 
 else:
     → flee
 ```
+
+Implementation note: `hasWeapon(bot)` in `rules.js` checks both `bot.heldItem` and `bot.inventory.items()` to handle Creative-mode inventory quirks where `findInventoryItem()` may not see items given via `/give` or `/item replace` commands. `tryEquipWeapon()` in `actions.js` uses the same dual-method search.
 
 ### Flee behavior: human-like escalation
 
 When flee is triggered, the bot follows a two-step escalation — the same pattern an experienced Minecraft player uses:
 
 **Step 1 — Sprint away**  
-Sprint in the direction opposite the centroid of the nearest hostile mob cluster for 10–15 blocks. Re-check if mobs are still within 10 blocks.
+Sprint in the direction opposite the centroid of the nearest hostile mob cluster for ~12 blocks. During each 5-tick sprint cycle the bot also jumps to navigate terrain obstacles (leaves, ledges). `pathfinder.setGoal(null)` is re-asserted every 5 ticks to prevent the LLM task's pathfinder goal from overriding the flee direction. Re-check if mobs are still within 10 blocks after sprint.
 
 **Step 2 — Pillar up**  
 If mobs are still pursuing after sprinting:
-1. Select any solid block from inventory (preference: cobblestone > dirt > any available block)
-2. Execute `pillarUp(bot, material, 4)` — jump and place a block underfoot, repeat 4 times
-3. Wait on the pillar until mobs despawn or retreat
+1. Select any solid block from inventory (preference: cobblestone > dirt > gravel > sand > stone)
+2. Execute `pillarUpReactive(bot, 3)` — jump and place a block underfoot, repeat 3 times (reduced from 4 to complete in ~1 second)
+3. All `pathfinder.setGoal(null)` calls inside pillar loop are wrapped in try-catch to suppress "Goal was changed" errors from competing LLM pathfinder calls
+4. Wait on the pillar until mobs despawn or retreat
 
 Pillar is effective against zombies, skeletons, creepers, and endermen. Spiders can climb pillars — the appropriate counter (cap block on top) is learned through the experience mechanism described in Feature 3.
 

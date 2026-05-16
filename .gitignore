@@ -132,3 +132,4 @@ plot_iter.py
 *.local.*
 *.lock.*
 *.iml
+/.claude/agent-memory/

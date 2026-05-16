@@ -12,6 +12,14 @@ from .agents import ActionAgent
 from .agents import CriticAgent
 from .agents import CurriculumAgent
 from .agents import SkillManager
+from .agents import SurvivalMemory
+
+_RAW_MEATS = frozenset({"beef", "porkchop", "mutton", "chicken", "salmon", "cod"})
+_WEAPON_NAMES = frozenset({
+    "wooden_sword", "stone_sword", "iron_sword", "golden_sword",
+    "diamond_sword", "netherite_sword", "bow", "crossbow",
+})
+_ANIMAL_MOBS = frozenset({"cow", "pig", "chicken", "sheep", "rabbit"})
 
 
 # TODO: remove event memory
@@ -180,6 +188,11 @@ class Voyager:
             ckpt_dir=skill_library_dir if skill_library_dir else ckpt_dir,
             resume=True if resume or skill_library_dir else False,
         )
+        self.survival_memory = SurvivalMemory(
+            llm=skill_llm,
+            ckpt_dir=ckpt_dir,
+            resume=resume,
+        )
         self.recorder = U.EventRecorder(ckpt_dir=ckpt_dir, resume=resume)
         self.resume = resume
         self.reset_mode = reset_mode
@@ -252,6 +265,7 @@ class Voyager:
                 programs=self.skill_manager.programs,
             )
             self.recorder.record(events, self.task)
+            self._process_survival_events(events)
             self.action_agent.update_chest_memory(events[-1][1]["nearbyChests"])
             success, critique = self.critic_agent.check_task_success(
                 events=events,
@@ -327,6 +341,112 @@ class Voyager:
                 break
         return messages, reward, done, info
 
+    def _process_survival_events(self, events):
+        if self.game_mode != "survival":
+            return
+        last_obs = events[-1][1]
+        status = last_obs.get("status", {})
+        reactive = last_obs.get("recentReactiveEvents", [])
+
+        for e in reactive:
+            if e.get("trigger") == "bot_death":
+                context = (
+                    f"timeOfDay={status.get('timeOfDay', 'unknown')}, "
+                    f"biome={status.get('biome', 'unknown')}, "
+                    f"isSheltered={status.get('isSheltered', False)}"
+                )
+                self.survival_memory.record_event(
+                    "death", e.get("inferred_cause", "unknown"), context
+                )
+
+        damage_events = [e for e in reactive if e.get("trigger") == "significant_damage"]
+        if damage_events:
+            worst = max(damage_events, key=lambda e: e.get("damage_amount", 0))
+            context = (
+                f"damage={worst['damage_amount']:.1f}hp, "
+                f"health_after={worst['health_after']:.1f}/20, "
+                f"biome={status.get('biome', 'unknown')}, "
+                f"timeOfDay={status.get('timeOfDay', 'unknown')}"
+            )
+            self.survival_memory.record_event(
+                "significant_damage", worst.get("damage_source", "unknown"), context
+            )
+
+        for event_type, event in events:
+            if event_type == "onSave" and event.get("onSave") == "shelter_built":
+                context = (
+                    f"isSheltered=True, "
+                    f"biome={status.get('biome', 'unknown')}, "
+                    f"timeOfDay={status.get('timeOfDay', 'unknown')}"
+                )
+                self.survival_memory.record_event("shelter_built", "player_skill", context)
+
+    def _get_shelter_task(self, last_obs):
+        inventory = last_obs.get("inventory", {})
+
+        _SHELTER_BLOCKS = ("cobblestone", "dirt", "stone", "oak_planks", "spruce_planks",
+                           "birch_planks", "jungle_planks", "acacia_planks", "dark_oak_planks")
+        has_blocks = any(b in inventory for b in _SHELTER_BLOCKS)
+        has_torch = "torch" in inventory
+
+        if not has_blocks:
+            return (
+                "Mine 16 cobblestone or dirt for shelter materials",
+                "It is night and you have no shelter. Collect building blocks first — cobblestone or dirt.",
+            )
+        if not has_torch:
+            return (
+                "Craft 4 torches for shelter lighting",
+                "It is night and you have no shelter. Craft torches (coal + stick) to light the shelter interior.",
+            )
+        return (
+            "Build a shelter around yourself and stand inside it",
+            "It is night and you are not sheltered. Build a small enclosed space AROUND your current position: "
+            "place solid blocks on 3 sides of you, place a roof block directly above your head (at Y+2), "
+            "then place a torch on one of the interior walls. "
+            "After placing all blocks, walk to the center of the shelter and stay there. "
+            "Use bot.entity.position to place blocks relative to your location. "
+            "Do not walk away from the shelter after building it.",
+        )
+
+    def _get_food_task(self, last_obs):
+        inventory = last_obs.get("inventory", {})
+        voxels = last_obs.get("voxels", [])
+        entities = last_obs["status"].get("entities", {})
+
+        raw_in_inv = [(m, inventory[m]) for m in _RAW_MEATS if m in inventory]
+        if raw_in_inv and "furnace" in voxels:
+            meat, count = max(raw_in_inv, key=lambda x: x[1])
+            return (
+                f"Smelt {count} {meat}",
+                f"You have {count} {meat} and a furnace is nearby. Smelt it for food.",
+            )
+
+        has_weapon = any(w in inventory for w in _WEAPON_NAMES)
+        nearby_animals = sorted(
+            [a for a in _ANIMAL_MOBS if a in entities],
+            key=lambda a: entities[a],
+        )
+        if has_weapon and nearby_animals:
+            target = nearby_animals[0]
+            return (
+                f"Kill 1 {target} for food",
+                f"You have a weapon and a {target} is nearby. Kill it for food.",
+            )
+
+        wheat_count = inventory.get("wheat", 0)
+        if wheat_count >= 3:
+            bread_count = wheat_count // 3
+            return (
+                f"Craft {bread_count} bread",
+                f"You have {wheat_count} wheat. Craft bread (3 wheat = 1 bread) for food.",
+            )
+
+        return (
+            "Explore to find food — look for animals or crops",
+            "No immediate food source available. Explore to find animals, crops, or naturally generated food.",
+        )
+
     def _propose_next_task(self, game_mode):
         if game_mode == "survival":
             last_obs = self.last_events[-1][1]
@@ -343,15 +463,34 @@ class Voyager:
                     "Eat food or find safety to restore health",
                     "Health is critically low (below 3 hearts). Survival is the only priority.",
                 )
-            if food < 6:
-                return (
-                    "Find and eat food immediately",
-                    "Hunger is critically low. Eating is required before any other action.",
-                )
+            recent_events = last_obs.get("recentReactiveEvents", [])
+            food_emergency = (
+                any(e.get("trigger") == "noFood" for e in recent_events)
+                or food < 6
+            )
+            if food_emergency:
+                return self._get_food_task(last_obs)
+            is_sheltered = last_obs["status"].get("isSheltered", False)
+            time_of_day = last_obs["status"].get("timeOfDay", "day")
+            # Afternoon/dusk: proactively propose shelter while it is still light
+            # At night, pillarUp (reactive layer) is the fallback — don't interrupt with construction tasks
+            if not is_sheltered and time_of_day in ("noon", "sunset"):
+                last_task = self.task or ""
+                if not any(
+                    kw in last_task.lower()
+                    for kw in ("shelter", "torch", "cobblestone or dirt")
+                ):
+                    return self._get_shelter_task(last_obs)
+        survival_lessons = (
+            self.survival_memory.get_recent_lessons()
+            if self.game_mode == "survival"
+            else ""
+        )
         return self.curriculum_agent.propose_next_task(
             events=self.last_events,
             chest_observation=self.action_agent.render_chest_observation(),
             max_retries=5,
+            survival_lessons=survival_lessons,
         )
 
     def learn(self, reset_env=True):

@@ -57,6 +57,7 @@ app.post("/start", (req, res) => {
         bot.removeListener("error", onConnectionFailed);
         let itemTicks = 1;
         if (req.body.reset === "hard") {
+            bot._isBeingReset = true;
             bot.chat("/clear @s");
             bot.chat("/kill @s");
             const inventory = req.body.inventory ? req.body.inventory : {};
@@ -129,12 +130,95 @@ app.post("/start", (req, res) => {
         initReactiveEngine(bot);
         bot.game_mode = req.body.game_mode || "creative";
 
+        if (bot.game_mode === "survival") {
+            const { HOSTILE_MOBS } = require("./lib/reactive/rules");
+            const { checkSheltered } = require("./lib/observation/shelter");
+
+            bot.lastDamagingEntity = null;
+            let _lastHealth = bot.health || 20;
+
+            bot.on("entityHurt", (entity) => {
+                if (entity !== bot.entity) return;
+
+                const pos = bot.entity.position;
+                const nearest = Object.values(bot.entities)
+                    .filter(
+                        (e) =>
+                            e.name &&
+                            HOSTILE_MOBS.has(e.name) &&
+                            e.position &&
+                            e.position.distanceTo(pos) <= 16
+                    )
+                    .sort(
+                        (a, b) =>
+                            a.position.distanceTo(pos) - b.position.distanceTo(pos)
+                    )[0];
+                bot.lastDamagingEntity = nearest
+                    ? {
+                          name: nearest.name,
+                          position: { x: nearest.position.x, y: nearest.position.y, z: nearest.position.z },
+                          timestamp: Date.now(),
+                      }
+                    : null;
+
+                const delta = _lastHealth - bot.health;
+                _lastHealth = bot.health;
+                if (delta > 4) {
+                    let source = "unknown";
+                    if (bot.entity.fallDistance > 3.5) {
+                        source = "fall";
+                    } else if (bot.entity.isInLava) {
+                        source = "lava";
+                    } else if (bot.entity.onFire) {
+                        source = "fire";
+                    } else if (bot.lastDamagingEntity) {
+                        source = bot.lastDamagingEntity.name;
+                    }
+                    bot.recentReactiveEvents.push({
+                        priority: 1,
+                        trigger: "significant_damage",
+                        action: "none",
+                        damage_amount: delta,
+                        damage_source: source,
+                        health_after: bot.health,
+                        timestamp: Date.now(),
+                        outcome: "triggered",
+                    });
+                }
+            });
+
+            bot.on("spawn", () => {
+                _lastHealth = bot.health || 20;
+            });
+
+            bot.on("death", () => {
+                if (bot._isBeingReset) return;
+                const pos = bot.entity.position.clone();
+                const cache = bot.lastDamagingEntity;
+                const cause =
+                    cache && Date.now() - cache.timestamp <= 3000
+                        ? cache.name
+                        : "unknown";
+                bot.recentReactiveEvents.push({
+                    priority: 0,
+                    trigger: "bot_death",
+                    action: "none",
+                    position: { x: pos.x, y: pos.y, z: pos.z },
+                    inferred_cause: cause,
+                    timestamp: Date.now(),
+                    outcome: "triggered",
+                });
+                bot.lastDamagingEntity = null;
+            });
+        }
+
         if (req.body.spread) {
             bot.chat(`/spreadplayers ~ ~ 0 300 under 80 false @s`);
             await bot.waitForTicks(bot.waitTicks);
         }
 
         await bot.waitForTicks(bot.waitTicks * itemTicks);
+        bot._isBeingReset = false;
         res.json(bot.observe());
 
         initCounter(bot);
