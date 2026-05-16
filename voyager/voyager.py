@@ -381,6 +381,34 @@ class Voyager:
                 )
                 self.survival_memory.record_event("shelter_built", "player_skill", context)
 
+    def _get_shelter_task(self, last_obs):
+        inventory = last_obs.get("inventory", {})
+
+        _SHELTER_BLOCKS = ("cobblestone", "dirt", "stone", "oak_planks", "spruce_planks",
+                           "birch_planks", "jungle_planks", "acacia_planks", "dark_oak_planks")
+        has_blocks = any(b in inventory for b in _SHELTER_BLOCKS)
+        has_torch = "torch" in inventory
+
+        if not has_blocks:
+            return (
+                "Mine 16 cobblestone or dirt for shelter materials",
+                "It is night and you have no shelter. Collect building blocks first — cobblestone or dirt.",
+            )
+        if not has_torch:
+            return (
+                "Craft 4 torches for shelter lighting",
+                "It is night and you have no shelter. Craft torches (coal + stick) to light the shelter interior.",
+            )
+        return (
+            "Build a shelter around yourself and stand inside it",
+            "It is night and you are not sheltered. Build a small enclosed space AROUND your current position: "
+            "place solid blocks on 3 sides of you, place a roof block directly above your head (at Y+2), "
+            "then place a torch on one of the interior walls. "
+            "After placing all blocks, walk to the center of the shelter and stay there. "
+            "Use bot.entity.position to place blocks relative to your location. "
+            "Do not walk away from the shelter after building it.",
+        )
+
     def _get_food_task(self, last_obs):
         inventory = last_obs.get("inventory", {})
         voxels = last_obs.get("voxels", [])
@@ -442,6 +470,17 @@ class Voyager:
             )
             if food_emergency:
                 return self._get_food_task(last_obs)
+            is_sheltered = last_obs["status"].get("isSheltered", False)
+            time_of_day = last_obs["status"].get("timeOfDay", "day")
+            # Afternoon/dusk: proactively propose shelter while it is still light
+            # At night, pillarUp (reactive layer) is the fallback — don't interrupt with construction tasks
+            if not is_sheltered and time_of_day in ("noon", "sunset"):
+                last_task = self.task or ""
+                if not any(
+                    kw in last_task.lower()
+                    for kw in ("shelter", "torch", "cobblestone or dirt")
+                ):
+                    return self._get_shelter_task(last_obs)
         survival_lessons = (
             self.survival_memory.get_recent_lessons()
             if self.game_mode == "survival"

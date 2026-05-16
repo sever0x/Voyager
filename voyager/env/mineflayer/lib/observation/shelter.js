@@ -8,22 +8,38 @@ const TRANSPARENT_BLOCKS = new Set([
 ]);
 
 function isSolid(block) {
-    if (!block || TRANSPARENT_BLOCKS.has(block.name)) return false;
-    if (block.name.endsWith("_door")) {
-        if (block.name.startsWith("iron")) return true;
-        const props = block.getProperties ? block.getProperties() : {};
-        return props.open === "false" || props.open === false;
+    if (!block) return false;
+    if (TRANSPARENT_BLOCKS.has(block.name)) return false;
+    // All door types count as walls regardless of open/closed state —
+    // a box with doors is still a shelter
+    if (block.name.endsWith("_door")) return true;
+    // Use boundingBox to exclude tall grass, flowers, etc.
+    return block.boundingBox === "block";
+}
+
+function hasNearbyLight(bot, pos) {
+    // Scan 5x5x5 cube for any block that emits light (torch, lantern, etc.)
+    // emittedLight comes from minecraft-data block definitions
+    for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -1; dy <= 3; dy++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                const b = bot.blockAt(pos.offset(dx, dy, dz));
+                if (b && b.emittedLight > 0) return true;
+            }
+        }
     }
-    return true;
+    return false;
 }
 
 function checkSheltered(bot) {
     try {
         const pos = bot.entity.position;
 
+        // Solid block directly above head (Y+2 from feet)
         const above = bot.blockAt(pos.offset(0, 2, 0));
         if (!isSolid(above)) return { isSheltered: false, safeToRecordLesson: false };
 
+        // At least 3 of 4 horizontal neighbors solid at eye level (Y+1)
         const neighbors = [
             bot.blockAt(pos.offset(1, 1, 0)),
             bot.blockAt(pos.offset(-1, 1, 0)),
@@ -34,11 +50,12 @@ function checkSheltered(bot) {
             return { isSheltered: false, safeToRecordLesson: false };
         }
 
-        const lightBlock = bot.blockAt(pos.offset(0, 1, 0));
-        if (!lightBlock || lightBlock.light < 8) {
+        // At least one light-emitting block within 5x5x5 cube
+        if (!hasNearbyLight(bot, pos)) {
             return { isSheltered: false, safeToRecordLesson: false };
         }
 
+        // No hostile mobs within 6 blocks (gate for recording a positive lesson)
         const nearby = Object.values(bot.entities).filter(
             (e) =>
                 e.name &&
