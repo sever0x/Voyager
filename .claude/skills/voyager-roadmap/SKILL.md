@@ -98,22 +98,39 @@ Key implementation notes for future validation:
 - `fightMob` has 15s hard timeout + `pvp.stop()` to prevent infinite hang
 - Fight branch also awaits `tryEquipWeapon` before `pvp.attack` if no weapon in hand
 
-**2.3 Shelter Building + Experience Memory**
-- `voyager/agents/survival_memory.py` — exists?
-- `voyager/prompts/curriculum.txt` — building restriction removed? (should NOT contain the phrase "placing, building, planting, and trading tasks should be avoided") ✅ already removed in Phase 1.4
-- `voyager/prompts/curriculum.txt` — contains survival experiences section? (grep for `survival` or `experiences`)
+**2.3 Shelter Building + Experience Memory** ✅
+- `voyager/agents/survival_memory.py` — exists, contains `SurvivalMemory`, `record_event`, `get_recent_lessons` ✅
+- `voyager/env/mineflayer/lib/observation/shelter.js` — exists, exports `checkSheltered(bot)` → `{isSheltered, safeToRecordLesson}` ✅
+- `voyager/env/mineflayer/lib/observation/status.js` — imports `checkSheltered`, returns `isSheltered` in observe() ✅
+- `voyager/env/mineflayer/lib/reactive/rules.js` — exports `HOSTILE_MOBS` ✅
+- `voyager/env/mineflayer/index.js` — contains `bot.on('death')`, `bot.on('entityHurt')`, `bot._isBeingReset`, `bot.lastDamagingEntity` ✅
+- `voyager/voyager.py` — contains `SurvivalMemory` import, `self.survival_memory`, `_process_survival_events`, `_get_shelter_task` ✅
+- `voyager/agents/curriculum.py` — `propose_next_task` accepts `survival_lessons`, `render_human_message` accepts `survival_lessons`, `render_observation` contains `is_sheltered`, `curriculum_observations` includes `"shelter"` ✅
+- `voyager/prompts/curriculum.txt` — contains rules 11 and 12, contains `Sheltered:` and `Recent survival experiences` fields ✅
+- `run.py` — reads `RESUME` and `RESET_MODE` from env ✅
+- `ckpt/survival/experiences.json` — created on first death/damage event ✅
 
-**2.4 Basic Chat Commands**
+Key implementation notes:
+- `isSheltered` check: solid above (Y+2) + ≥3 solid walls (Y+1) + `emittedLight > 0` in 5×5×5 cube. Doors always counted as solid (all types).
+- Death attribution: `bot.lastDamagingEntity` cache updated on `entityHurt`, read in `bot.on('death')` with 3-second window.
+- Damage threshold: > 4 HP (2 hearts) per entityHurt event.
+- Night override fires at `noon`/`sunset` only — at night, `pillarUp` from reactive layer is the fallback.
+- Loop prevention: `_get_shelter_task` not re-proposed if `self.task` already contains shelter keywords.
+- Deduplication: `record_event` skips if last entry has identical type+cause.
+- `RESUME=true` in `.env` → loads experiences.json and vectordbs; do NOT run with `RESUME=false` if vectordb exists.
+
+**2.4 Basic Chat Commands** ⬜
 - `voyager/env/mineflayer/lib/chat.js` — exists?
 - `voyager/env/mineflayer/index.js` — contains `recentChatCommands`?
 
-**2.5 Day/Night Cycle + Home**
-- `voyager/env/mineflayer/lib/observation/shelter.js` — exists?
-- `ckpt/survival/home.json` or a creation path for it in Python — exists?
+**2.5 Day/Night Cycle + Home** 🔄
+- `voyager/voyager.py` — `_propose_next_task` checks `noon`/`sunset` + `isSheltered` ✅ (partial)
+- `ckpt/survival/home.json` or a creation path for it in Python — not yet implemented ⬜
 
-**2.6 Death Handling**
-- `voyager/env/mineflayer/index.js` — contains `bot.on('death')`?
-- `voyager/agents/survival_memory.py` — contains `record_event`?
+**2.6 Death Handling** 🔄
+- `voyager/env/mineflayer/index.js` — contains `bot.on('death')` ✅
+- `voyager/agents/survival_memory.py` — contains `record_event` ✅
+- Item recovery logic (return to death coordinates) — not yet implemented ⬜
 
 ### Report output format
 
@@ -171,6 +188,6 @@ These are the decisions most likely to be second-guessed during implementation:
 
 Phase 1: **COMPLETE.** All four blockers implemented across branches leading to `buddy/phase1`.
 
-Phase 2 order: ~~food reactive rules~~ ✅ → ~~fight/flee + pillarUp~~ ✅ → **survival_memory.py + experiences checkpoint** (next) → chat.js → shelter observation (isSheltered) + home.json → death handler.
+Phase 2 order: ~~food reactive rules~~ ✅ → ~~fight/flee + pillarUp~~ ✅ → ~~survival_memory.py + isSheltered + experiences checkpoint~~ ✅ → **chat.js + recentChatCommands** (next) → home.json + item recovery after death.
 
 If the user asks "what should I implement first?", give the specific next uncompleted item from the relevant phase checklist, not a general answer.
